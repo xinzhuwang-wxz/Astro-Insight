@@ -44,3 +44,10 @@ flake8>=6.0.0
 # 可选：Jupyter支持
 jupyter>=1.0.0
 ipykernel>=6.0.0
+
+# 额外发现的依赖包
+langchain-deepseek>=0.1.4
+httpx>=0.23.0
+
+# Tavily搜索支持
+tavily-python>=0.3.0
