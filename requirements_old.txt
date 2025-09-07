@@ -1,0 +1,101 @@
+# 天体分析系统 - Python依赖包
+
+# Web框架
+Flask==2.3.3
+Flask-CORS==4.0.0
+Werkzeug==2.3.7
+
+# 天文学专业库
+astropy==5.3.4
+astroquery==0.4.6
+numpy==1.24.4
+matplotlib==3.7.2
+pandas==2.0.3
+scipy==1.11.4
+
+# 机器学习
+scikit-learn==1.3.2
+joblib==1.3.2
+
+# 数据库和API
+psycopg2-binary==2.9.9
+requests==2.31.0
+
+# 语言处理
+langdetect==1.0.9
+
+# 多翻译源支持
+translators==5.9.2
+
+# 系统和工具
+psutil==5.9.6
+python-dotenv==1.0.0
+click==8.1.7
+
+# 开发和测试
+pytest==7.4.3
+pytest-cov==4.1.0
+flake8==6.1.0
+black==23.11.0
+isort==5.12.0
+
+# 日志和监控
+loguru==0.7.2
+
+# 数据处理
+Pillow==10.1.0
+openpyxl==3.1.2
+
+# 安全
+cryptography>=42.0.4
+
+# 时间处理
+pytz==2023.3
+
+# JSON处理
+orjson>=3.9.14
+
+# 异步支持
+aiohttp==3.9.1
+aiofiles==23.2.1
+httpx>=0.24.0
+
+# 图像处理（天体图像分析）
+opencv-python==4.8.1.78
+
+# 数值计算优化
+numba==0.58.1
+
+# 配置管理
+pydantic==2.5.0
+
+# 缓存
+redis==5.0.1
+
+# 任务队列
+celery==5.3.4
+
+# 监控和性能
+psutil==5.9.6
+memory-profiler==0.61.0
+
+# 文档生成
+sphinx==7.2.6
+
+# 代码质量
+mypy==1.7.1
+pylint==3.0.3
+
+# Tavily搜索支持
+tavily-python>=0.3.0
+
+# LangChain相关依赖
+langchain-community==0.2.16
+langchain-core==0.2.38
+langchain-openai==0.1.23
+langgraph==0.2.16
+
+# 其他必要依赖
+Jinja2
+packaging
+PyYAML

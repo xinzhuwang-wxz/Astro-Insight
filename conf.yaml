@@ -9,7 +9,7 @@
 BASIC_MODEL:
   base_url: https://ark.cn-beijing.volces.com/api/v3
   model: "doubao-1-5-thinking-pro-250415"
-  api_key: xxx
+  api_key: xxxxxx
   # https://www.volcengine.com/experience/ark?model=doubao-1-5-thinking-pro-250415 界面点击"api接入获取"
   # max_retries: 3 # Maximum number of retries for LLM calls
   # verify_ssl: false  # Uncomment this line to disable SSL certificate verification for self-signed certificates

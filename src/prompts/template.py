@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from langgraph.prebuilt.chat_agent_executor import AgentState
+from langgraph.graph import MessagesState as AgentState
 from langchain_core.prompts import ChatPromptTemplate
 
 # Initialize Jinja2 environment

@@ -5,37 +5,81 @@ from typing import TypedDict, Optional, List, Dict, Any, Annotated, Literal
 from langgraph.graph.message import add_messages
 import time
 import uuid
+from enum import Enum
+
+
+class AnalysisState(Enum):
+    """分析状态枚举"""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class NodeType(Enum):
+    """节点类型枚举"""
+
+    IDENTITY_CHECK = "identity_check"
+    QA_RESPONSE = "qa_response"
+    CODE_GENERATOR = "code_generator"
+    CODE_EXECUTOR = "code_executor"
+    FINAL_ANSWER = "final_answer"
+    INPUT_PROCESSOR = "input_processor"
+    CELESTIAL_CLASSIFIER = "celestial_classifier"
+    DATA_RETRIEVAL = "data_retrieval"
+    LITERATURE_REVIEW = "literature_review"
+    TASK_SELECTOR = "task_selector"
+    CLASSIFICATION_CONFIG = "classification_config"
+    REVIEW_LOOP = "review_loop"
+    ERROR_RECOVERY = "error_recovery"
+
+
+class ExecutionStatus(Enum):
+    """执行状态枚举"""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCESS = "success"
+    ERROR = "error"
+    TIMEOUT = "timeout"
+    CANCELLED = "cancelled"
 
 
 class AstroAgentState(TypedDict):
     """LangGraph状态定义 - 天文科研Agent系统"""
+
     # 基础会话信息
     session_id: str
     user_input: str
     messages: Annotated[List[Dict[str, Any]], add_messages]
-    
+
     # 用户身份和任务信息
     user_type: Optional[Literal["amateur", "professional"]]
     task_type: Optional[Literal["classification", "retrieval", "literature"]]
-    
+
     # 配置数据
     config_data: Dict[str, Any]
-    
+
     # 执行状态
     current_step: str
     next_step: Optional[str]
     is_complete: bool
-    
+    awaiting_user_choice: bool
+    user_choice: Optional[str]
+
     # 结果数据
     qa_response: Optional[str]
+    response: Optional[str]  # 对话响应字段
     final_answer: Optional[str]
     generated_code: Optional[str]
     execution_result: Optional[Dict[str, Any]]
-    
+
     # 错误处理
     error_info: Optional[Dict[str, Any]]
     retry_count: int
-    
+
     # 历史记录
     execution_history: List[Dict[str, Any]]
     timestamp: float
@@ -43,7 +87,7 @@ class AstroAgentState(TypedDict):
 
 def validate_state(state: AstroAgentState) -> tuple[bool, List[str]]:
     """验证状态完整性"""
-    required_fields = ['session_id', 'user_input', 'current_step', 'timestamp']
+    required_fields = ["session_id", "user_input", "current_step", "timestamp"]
     missing_fields = [field for field in required_fields if field not in state]
     is_valid = len(missing_fields) == 0
     return is_valid, missing_fields
@@ -61,12 +105,15 @@ def create_initial_state(session_id: str, user_input: str) -> AstroAgentState:
         current_step="identity_check",
         next_step=None,
         is_complete=False,
+        awaiting_user_choice=False,
+        user_choice=None,
         qa_response=None,
+        response=None,
         final_answer=None,
         generated_code=None,
         execution_result=None,
         error_info=None,
         retry_count=0,
         execution_history=[],
-        timestamp=time.time()
+        timestamp=time.time(),
     )

@@ -5,72 +5,60 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from .nodes import (
-    identity_check_node,
-    qa_agent_node,
-    task_selector_node,
-    classification_config_node,
+    identity_check_command_node,
+    qa_agent_command_node,
+    user_choice_handler_command_node,
+    task_selector_command_node,
+    classification_config_command_node,
     data_retrieval_node,
     literature_review_node,
-    code_generator_node,
-    code_executor_node,
-    review_loop_node,
-    error_recovery_node
+    code_generator_command_node,
+    code_executor_command_node,
+    review_loop_command_node,
+    error_recovery_command_node
 )
 from .types import AstroAgentState
 
 
 def route_after_identity_check(state: AstroAgentState) -> str:
-    """身份识别后的路由逻辑"""
-    user_type = state.get("user_type")
+    """身份识别后的路由逻辑 - 简化版本，避免重复调用"""
+    user_type = state.get("user_type", "amateur")
     
-    # 添加调试信息
-    print(f"[DEBUG] route_after_identity_check: user_type = {user_type}")
-    print(f"[DEBUG] route_after_identity_check: state keys = {list(state.keys())}")
-    
-    if user_type == "amateur":
-        print(f"[DEBUG] Routing to qa_agent")
-        return "qa_agent"
-    elif user_type == "professional":
-        print(f"[DEBUG] Routing to task_selector")
-        return "task_selector"  # 专业用户直接进入任务选择
+    # 简化路由逻辑：根据用户类型直接路由，不再检查identity_completed状态
+    if user_type == "professional":
+        return "task_selector"
     else:
-        print(f"[DEBUG] Routing to error_recovery (user_type not recognized)")
-        return "error_recovery"
+        # amateur用户或未知类型都进入QA流程
+        return "qa_agent"
 
 
 def route_after_qa(state: AstroAgentState) -> str:
-    """QA节点后的路由逻辑"""
-    user_type = state.get("user_type")
-    current_step = state.get("current_step")
+    """QA节点后的路由逻辑 - 简化版本，避免重复调用"""
+    user_type = state.get("user_type", "amateur")
     
-    if user_type == "professional" and current_step == "qa_completed_continue":
+    # 简化路由逻辑：根据用户类型直接路由，不进行复杂的状态检查
+    if user_type == "professional":
         return "task_selector"
     else:
-        return END
+        # amateur用户进入用户选择处理
+        return "user_choice_handler"
 
 
 def route_after_task_selection(state: AstroAgentState) -> str:
     """任务选择后的路由逻辑"""
-    task_type = state.get("task_type")
-    print(f"[DEBUG] route_after_task_selection: task_type = {task_type}")
+    task_type = state.get("task_type", "classification")
     
     if task_type == "classification":
-        print(f"[DEBUG] route_after_task_selection: routing to classification_config")
         return "classification_config"
     elif task_type == "code_generation":
-        print(f"[DEBUG] route_after_task_selection: routing to classification_config (code_generation)")
-        return "classification_config"  # 代码生成任务也使用分类配置节点
+        return "classification_config"
     elif task_type == "analysis":
-        print(f"[DEBUG] route_after_task_selection: routing to classification_config (analysis)")
-        return "classification_config"  # 分析任务也使用分类配置节点
-    elif task_type == "data_retrieval" or task_type == "retrieval":
-        print(f"[DEBUG] route_after_task_selection: routing to data_retrieval")
+        return "classification_config"
+    elif task_type == "data_retrieval":
         return "data_retrieval"
-    elif task_type == "literature_review" or task_type == "literature":
-        print(f"[DEBUG] route_after_task_selection: routing to literature_review")
+    elif task_type == "literature_review":
         return "literature_review"
     else:
-        print(f"[DEBUG] route_after_task_selection: routing to error_recovery (unknown task_type)")
         return "error_recovery"
 
 
@@ -100,39 +88,52 @@ def route_after_review(state: AstroAgentState) -> str:
         return "error_recovery"
 
 
+def route_after_error_recovery(state: AstroAgentState) -> str:
+    """错误恢复后的路由逻辑 - 简化版本，避免循环调用"""
+    retry_count = state.get("retry_count", 0)
+    error_info = state.get("error_info")
+    
+    # 如果重试次数已达上限或没有错误信息，直接结束
+    if retry_count >= 3 or not error_info:
+        return END
+    
+    # 简化逻辑：错误恢复后直接结束，避免重新进入其他节点造成循环
+    return END
+
+
 def check_for_errors(state: AstroAgentState) -> str:
-    """检查是否有错误需要处理"""
+    """检查是否有错误需要处理 - 简化版本"""
     error_info = state.get("error_info")
     retry_count = state.get("retry_count", 0)
     
+    # 如果任务已完成，直接结束
+    if state.get("is_complete"):
+        return END
+    
+    # 如果有错误且重试次数未达上限，进行错误恢复
     if error_info and retry_count < 3:
         return "error_recovery"
-    elif state.get("is_complete"):
-        return END
-    else:
-        # 根据当前步骤继续执行
-        current_step = state.get("current_step", "start")
-        if current_step == "start":
-            return "identity_check"
-        else:
-            return END
+    
+    # 其他情况直接结束，避免无限循环
+    return END
 
 
 def _build_astro_graph():
     """构建天文科研Agent的状态图"""
     graph = StateGraph(AstroAgentState)
     
-    # 添加节点
-    graph.add_node("identity_check", identity_check_node)
-    graph.add_node("qa_agent", qa_agent_node)
-    graph.add_node("task_selector", task_selector_node)
-    graph.add_node("classification_config", classification_config_node)
+    # 添加节点 - 使用Command版本的节点以支持新版langgraph
+    graph.add_node("identity_check", identity_check_command_node)
+    graph.add_node("qa_agent", qa_agent_command_node)
+    graph.add_node("user_choice_handler", user_choice_handler_command_node)
+    graph.add_node("task_selector", task_selector_command_node)
+    graph.add_node("classification_config", classification_config_command_node)
     graph.add_node("data_retrieval", data_retrieval_node)
     graph.add_node("literature_review", literature_review_node)
-    graph.add_node("code_generator", code_generator_node)
-    graph.add_node("code_executor", code_executor_node)
-    graph.add_node("review_loop", review_loop_node)
-    graph.add_node("error_recovery", error_recovery_node)
+    graph.add_node("code_generator", code_generator_command_node)
+    graph.add_node("code_executor", code_executor_command_node)
+    graph.add_node("review_loop", review_loop_command_node)
+    graph.add_node("error_recovery", error_recovery_command_node)
     
     # 设置入口点
     graph.set_entry_point("identity_check")
@@ -154,7 +155,20 @@ def _build_astro_graph():
         route_after_qa,
         {
             "task_selector": "task_selector",
+            "user_choice_handler": "user_choice_handler",
             END: END
+        }
+    )
+    
+    # user_choice_handler 的条件边配置
+    graph.add_conditional_edges(
+        "user_choice_handler",
+        lambda state: state.get("current_step", "unknown"),
+        {
+            "user_chose_more_info": "task_selector",
+            "user_chose_end": END,
+            "invalid_choice_exit": END,
+            "waiting_for_valid_choice": END  # 无效输入时结束，等待用户重新开始对话
         }
     )
     
@@ -170,8 +184,8 @@ def _build_astro_graph():
         }
     )
     
-    # 配置完成后直接结束（专业用户分类任务到此完成）
-    graph.add_edge("classification_config", "code_generator")
+    # 注意：classification_config 使用Command语法
+    # 它的路由由Command对象的goto字段控制，不需要预定义边
     
     # 数据检索和文献综述直接结束
     graph.add_edge("data_retrieval", END)
@@ -202,13 +216,11 @@ def _build_astro_graph():
         }
     )
     
-    # 错误恢复后的路由
+    # 错误恢复后的路由 - 简化版本，只允许结束，避免循环调用
     graph.add_conditional_edges(
         "error_recovery",
-        check_for_errors,
+        route_after_error_recovery,
         {
-            "identity_check": "identity_check",
-            "error_recovery": "error_recovery",
             END: END
         }
     )
