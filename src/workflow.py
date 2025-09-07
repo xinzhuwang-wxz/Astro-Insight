@@ -12,9 +12,9 @@ import time
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
-from .graph.types import AstroAgentState, create_initial_state, validate_state
-from .graph.builder import build_graph
-from .config import load_yaml_config
+from src.graph.types import AstroAgentState, create_initial_state, validate_state
+from src.graph.builder import build_graph
+from src.config import load_yaml_config
 
 # 配置日志
 logging.basicConfig(
@@ -127,10 +127,13 @@ class AstroWorkflow:
             else:
                 # 更新现有会话
                 session = self.sessions[session_id]
-                initial_state = session["current_state"]
+                initial_state = session["current_state"].copy()
                 initial_state["user_input"] = user_input
                 if user_context:
-                    initial_state.update(user_context)
+                    # 只更新非session_id字段
+                    for key, value in user_context.items():
+                        if key != "session_id":
+                            initial_state[key] = value
                 session["last_updated"] = datetime.now()
 
             # 执行图

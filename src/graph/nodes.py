@@ -198,27 +198,12 @@ def identity_check_command_node(state: AstroAgentState) -> Command[AstroAgentSta
                     else:
                         user_type = "amateur"  # 默认为爱好者
 
-        # 更新状态
-        updated_state = state.copy()
-        updated_state["user_type"] = user_type
-        updated_state["current_step"] = "identity_checked"
-        updated_state["identity_completed"] = True  # 标记身份识别已完成
-        
-        # 确保config_data存在
-        if "config_data" not in updated_state:
-            updated_state["config_data"] = {}
-        updated_state["config_data"]["identified_user_type"] = user_type
-
-        # 记录执行历史
-        if "execution_history" not in updated_state:
-            updated_state["execution_history"] = []
-        updated_state["execution_history"].append({
-            "node": "identity_check_command_node",
-            "action": "user_type_identification",
-            "input": user_input,
-            "output": user_type,
-            "timestamp": time.time(),
-        })
+        # 更新状态 - 只更新必要的字段，避免字段冲突
+        updated_state = {
+            "user_type": user_type,
+            "current_step": "identity_checked",
+            "identity_completed": True
+        }
 
         # 使用Command语法直接路由到下一个节点
         if user_type == "amateur":
@@ -242,14 +227,14 @@ def identity_check_command_node(state: AstroAgentState) -> Command[AstroAgentSta
             )
 
     except Exception as e:
-        # 错误处理
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "identity_check_command_node",
-            "error": str(e),
-            "timestamp": time.time(),
+        # 错误处理 - 只更新必要的字段
+        error_state = {
+            "error_info": {
+                "node": "identity_check_command_node",
+                "error": str(e),
+                "timestamp": time.time(),
+            }
         }
-        error_state["retry_count"] = error_state.get("retry_count", 0) + 1
         
         return Command(
             update=error_state,
@@ -1599,32 +1584,24 @@ def error_recovery_command_node(state: AstroAgentState) -> Command[AstroAgentSta
 
 如果问题持续存在，请联系技术支持。"""
 
-            updated_state = state.copy()
-            updated_state["qa_response"] = fallback_response
-            updated_state["final_answer"] = fallback_response
-            updated_state["current_step"] = "error_handled"
-            updated_state["is_complete"] = True
+            # 只更新必要的字段，避免复制整个状态
+            updated_state = {
+                "qa_response": fallback_response,
+                "final_answer": fallback_response,
+                "current_step": "error_handled",
+                "is_complete": True
+            }
 
-            if "messages" not in updated_state:
+            # 处理messages
+            if "messages" in state:
+                updated_state["messages"] = state["messages"].copy()
+            else:
                 updated_state["messages"] = []
             updated_state["messages"].append(
                 {"role": "assistant", "content": fallback_response}
             )
             
-            # 初始化execution_history如果不存在
-            if "execution_history" not in updated_state:
-                updated_state["execution_history"] = []
-
-            # 记录执行历史
-            updated_state["execution_history"].append(
-                {
-                    "node": "error_recovery_command_node",
-                    "action": "error_handling",
-                    "input": error_info,
-                    "output": {"action": "fallback", "reason": reason, "retry_count": retry_count},
-                    "timestamp": time.time(),
-                }
-            )
+            # 不更新execution_history，避免字段冲突
             
             # 结束流程，不再重试
             return Command(
@@ -1633,28 +1610,12 @@ def error_recovery_command_node(state: AstroAgentState) -> Command[AstroAgentSta
             )
         else:
             # 在重试限制内，根据错误来源进行有针对性的恢复
-            updated_state = state.copy()
-            updated_state["error_info"] = None
-            updated_state["retry_count"] = retry_count + 1
-            updated_state["last_error_node"] = current_error_node  # 记录当前错误节点
+            updated_state = {
+                "last_error_node": current_error_node,  # 记录当前错误节点
+                "error_recovery_completed": True
+            }
 
-            # 初始化execution_history如果不存在
-            if "execution_history" not in updated_state:
-                updated_state["execution_history"] = []
-
-            # 添加错误恢复完成标志
-            updated_state["error_recovery_completed"] = True
-            
-            # 记录执行历史
-            updated_state["execution_history"].append(
-                {
-                    "node": "error_recovery_command_node",
-                    "action": "error_handling",
-                    "input": error_info,
-                    "output": {"action": "retry", "retry_count": retry_count + 1, "max_retries": MAX_RETRY_COUNT},
-                    "timestamp": time.time(),
-                }
-            )
+            # 不更新execution_history，避免字段冲突
             
             # 根据错误来源决定恢复策略
             error_node = error_info.get("node") if error_info else None

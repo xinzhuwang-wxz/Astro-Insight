@@ -7,10 +7,17 @@
 # - A restart is required every time you change the `config.yaml` file.
 
 BASIC_MODEL:
-  base_url: https://ark.cn-beijing.volces.com/api/v3
-  model: "doubao-1-5-thinking-pro-250415"
-  api_key: xxxxxx
-  # https://www.volcengine.com/experience/ark?model=doubao-1-5-thinking-pro-250415 界面点击"api接入获取"
-  # max_retries: 3 # Maximum number of retries for LLM calls
-  # verify_ssl: false  # Uncomment this line to disable SSL certificate verification for self-signed certificates
+  base_url: http://localhost:11434/v1
+  model: "qwen2.5:7b"
+  api_key: "ollama"  # Ollama不需要真实API key，但需要提供值
+  max_retries: 3
+  verify_ssl: false  # 本地Ollama通常使用HTTP
+
+# 搜索API配置
+SEARCH_API:
+  provider: tavily
+  api_key: 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
+  base_url: https://api.tavily.com
+  max_results: 5
+  include_domains: ["arxiv.org", "nasa.gov", "esa.int", "aas.org"]
  

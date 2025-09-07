@@ -50,14 +50,14 @@ class ExecutionStatus(Enum):
 class AstroAgentState(TypedDict):
     """LangGraph状态定义 - 天文科研Agent系统"""
 
-    # 基础会话信息
+    # 基础会话信息 - 这些字段在状态更新中不应该被修改
     session_id: str
     user_input: str
     messages: Annotated[List[Dict[str, Any]], add_messages]
 
     # 用户身份和任务信息
     user_type: Optional[Literal["amateur", "professional"]]
-    task_type: Optional[Literal["classification", "retrieval", "literature"]]
+    task_type: Optional[Literal["classification", "retrieval", "literature", "code_generation", "analysis"]]
 
     # 配置数据
     config_data: Dict[str, Any]
