@@ -4,34 +4,34 @@ Astro Insight 项目主模块
 提供天体分类检索的完整功能套件
 """
 
-# 核心工具模块
-from .tools import (
-    # 语言检测和翻译
-    language_processor,
-    translate_text,
-    LanguageDetectionResult,
-    TranslationResult,
-    # 天体名称提取
-    enhanced_name_extractor,
-    extract_celestial_names,
-    ExtractedCelestialObject,
-    # 并发查询
-    query_manager,
-    celestial_query_engine,
-    QueryResult,
-    ConcurrentQueryManager,
-    # 缓存管理
-    cache_manager,
-    CacheEntry,
-    LRUCache,
-    CacheManager,
-    # 错误处理
-    error_handler,
-    with_retry,
-    ErrorCategory,
-    RetryConfig,
-    ErrorHandler,
-)
+# 核心工具模块 - 暂时注释掉未使用的模块
+# from .tools import (
+#     # 语言检测和翻译
+#     language_processor,
+#     translate_text,
+#     LanguageDetectionResult,
+#     TranslationResult,
+#     # 天体名称提取
+#     enhanced_name_extractor,
+#     extract_celestial_names,
+#     ExtractedCelestialObject,
+#     # 并发查询
+#     query_manager,
+#     celestial_query_engine,
+#     QueryResult,
+#     ConcurrentQueryManager,
+#     # 缓存管理
+#     cache_manager,
+#     CacheEntry,
+#     LRUCache,
+#     CacheManager,
+#     # 错误处理
+#     error_handler,
+#     with_retry,
+#     ErrorCategory,
+#     RetryConfig,
+#     ErrorHandler,
+# )
 
 # 数据库模块
 from .database import (
@@ -98,11 +98,7 @@ from .api import (
 )
 
 __all__ = [
-    # 工具模块
-    "language_processor",
-    "translate_text",
-    "LanguageDetectionResult",
-    "TranslationResult",
+    # 工具模块 - 已移除翻译相关功能
     "enhanced_name_extractor",
     "extract_celestial_names",
     "ExtractedCelestialObject",

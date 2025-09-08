@@ -57,7 +57,7 @@ class AstroAgentState(TypedDict):
 
     # 用户身份和任务信息
     user_type: Optional[Literal["amateur", "professional"]]
-    task_type: Optional[Literal["classification", "retrieval", "literature", "code_generation", "analysis"]]
+    task_type: Optional[Literal["classification", "retrieval", "visualization", "qa"]]
 
     # 配置数据
     config_data: Dict[str, Any]
@@ -82,6 +82,8 @@ class AstroAgentState(TypedDict):
 
     # 历史记录
     execution_history: List[Dict[str, Any]]
+    node_history: List[str]  # 节点历史记录
+    current_node: Optional[str]  # 当前节点
     timestamp: float
 
 
@@ -115,5 +117,7 @@ def create_initial_state(session_id: str, user_input: str) -> AstroAgentState:
         error_info=None,
         retry_count=0,
         execution_history=[],
+        node_history=[],
+        current_node=None,
         timestamp=time.time(),
     )

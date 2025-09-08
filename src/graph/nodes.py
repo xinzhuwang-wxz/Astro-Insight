@@ -18,18 +18,98 @@ from langgraph.types import Command
 from src.graph.types import AstroAgentState, ExecutionStatus
 from src.llms.llm import get_llm_by_type
 from src.prompts.template import get_prompt
-from src.tools.language_processor import language_processor
+
+
+def track_node_execution(node_name: str):
+    """节点执行跟踪装饰器"""
+    def decorator(func):
+        def wrapper(state: AstroAgentState) -> Command[AstroAgentState]:
+            # 更新当前节点
+            updated_state = state.copy()
+            updated_state["current_node"] = node_name
+            
+            # 添加到节点历史（如果不在历史中）
+            node_history = updated_state.get("node_history", [])
+            if not node_history or node_history[-1] != node_name:
+                node_history.append(node_name)
+                updated_state["node_history"] = node_history
+            
+            # 输出节点信息
+            print(f"\n🔍 当前节点: {node_name}")
+            if len(node_history) > 1:
+                print(f"📋 历史节点: {' → '.join(node_history[:-1])}")
+            else:
+                print(f"📋 历史节点: (起始节点)")
+            
+            # 执行原函数
+            result = func(updated_state)
+            
+            # 如果返回的是Command对象，更新其状态
+            if isinstance(result, Command):
+                # 合并节点跟踪信息到Command的update中
+                if result.update:
+                    result.update.update({
+                        "current_node": node_name,
+                        "node_history": node_history
+                    })
+                else:
+                    result.update = {
+                        "current_node": node_name,
+                        "node_history": node_history
+                    }
+            
+            return result
+        return wrapper
+    return decorator
+# from src.tools.language_processor import language_processor  # 暂时未使用
 from src.database.local_storage import LocalDatabase, CelestialObject, ClassificationResult
 
 
+def _extract_celestial_name_simple(user_input: str) -> str:
+    """从用户输入中提取天体名称 - 简单有效的方法（参考complete_simple_system.py）"""
+    import re
+    
+    # 移除常见的分类关键词
+    clean_input = user_input
+    keywords_to_remove = [
+        "分类", "classify", "这个天体", "这个", "天体", "celestial", "object",
+        "是什么", "什么类型", "什么", "类型", "type", "分析", "analyze"
+    ]
+    
+    for keyword in keywords_to_remove:
+        clean_input = clean_input.replace(keyword, "")
+    
+    # 移除标点符号
+    clean_input = re.sub(r'[：:，,。.！!？?]', '', clean_input)
+    
+    # 提取可能的天体名称
+    # 匹配常见的天体命名模式
+    patterns = [
+        r'M\d+',  # 梅西耶天体
+        r'NGC\s*\d+',  # NGC天体
+        r'IC\s*\d+',  # IC天体
+        r'HD\s*\d+',  # HD星表
+        r'[A-Z][a-z]+\s*\d+',  # 星座+数字
+        r'[A-Z][a-z]+',  # 星座名
+        r'[A-Z]\d+',  # 单字母+数字
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, clean_input, re.IGNORECASE)
+        if match:
+            return match.group().strip()
+    
+    # 如果没有匹配到模式，返回清理后的输入
+    return clean_input.strip() if clean_input.strip() else ""
+
+
 def extract_celestial_info_from_query(user_input: str, user_requirements: str = None) -> dict:
-    """从用户查询中提取天体信息"""
+    """从用户查询中提取天体信息 - 使用简单有效的提取逻辑"""
     try:
-        # 使用language_processor提取天体信息
-        celestial_extraction = language_processor.extract_celestial_object(user_input)
+        # 使用简单规则提取天体名称（参考complete_simple_system.py）
+        celestial_name = _extract_celestial_name_simple(user_input)
         
-        # 如果没有提取到信息或提取的名称为空，返回默认结构
-        if not celestial_extraction or not celestial_extraction.object_name:
+        if not celestial_name:
             celestial_info = {
                 "object_name": "未知天体",
                 "coordinates": {"ra": None, "dec": None},
@@ -38,11 +118,11 @@ def extract_celestial_info_from_query(user_input: str, user_requirements: str = 
                 "description": user_input
             }
         else:
-            # 将CelestialObjectExtraction对象转换为字典
+            # 构建天体信息
             celestial_info = {
-                "object_name": celestial_extraction.object_name,
-                "coordinates": celestial_extraction.coordinates or {"ra": None, "dec": None},
-                "object_type": celestial_extraction.object_type or "未知",
+                "object_name": celestial_name,
+                "coordinates": {"ra": None, "dec": None},
+                "object_type": "未知",
                 "magnitude": None,
                 "description": user_input
             }
@@ -57,6 +137,92 @@ def extract_celestial_info_from_query(user_input: str, user_requirements: str = 
             "magnitude": None,
             "description": user_input
         }
+
+
+def _classify_celestial_object_with_llm(user_input: str, celestial_info: dict, llm) -> dict:
+    """使用LLM进行智能天体分类（参考complete_simple_system.py）"""
+    try:
+        object_name = celestial_info.get("object_name", "未知天体")
+        
+        # 构建分类提示词
+        classification_prompt = f"""请对以下天体进行专业的天体分类。
+
+天体名称: {object_name}
+用户查询: {user_input}
+
+请按照以下格式返回分类结果（JSON格式）：
+{{
+    "object_name": "天体名称",
+    "primary_category": "主要类别",
+    "subcategory": "子类别", 
+    "detailed_classification": "详细分类",
+    "confidence_level": "置信度",
+    "scientific_name": "科学名称",
+    "object_type": "天体类型",
+    "description": "简要描述"
+}}
+
+主要类别选项：
+- 恒星 (Star)
+- 行星 (Planet) 
+- 星系 (Galaxy)
+- 星云 (Nebula)
+- 星团 (Cluster)
+- 小行星 (Asteroid)
+- 彗星 (Comet)
+- 双星 (Binary Star)
+- 超新星 (Supernova)
+- 深空天体 (Deep Sky Object)
+
+请根据天体名称和查询内容进行准确分类："""
+
+        # 调用LLM
+        from langchain_core.messages import HumanMessage
+        messages = [HumanMessage(content=classification_prompt)]
+        response = llm.invoke(messages)
+        
+        # 解析响应
+        response_content = response.content.strip()
+        
+        # 尝试解析JSON
+        try:
+            import json
+            # 清理响应内容，移除markdown代码块格式
+            if "```json" in response_content:
+                response_content = response_content.split("```json")[1].split("```")[0]
+            elif "```" in response_content:
+                response_content = response_content.split("```")[1].split("```")[0]
+            
+            classification_data = json.loads(response_content)
+            
+            return {
+                "classification_result": classification_data,
+                "success": True,
+                "method": "llm_classification"
+            }
+            
+        except json.JSONDecodeError:
+            # 如果JSON解析失败，使用规则分类作为后备
+            return _classify_celestial_object_by_rules(user_input, celestial_info)
+            
+    except Exception as e:
+        print(f"LLM分类失败: {e}")
+        # 使用规则分类作为后备
+        return _classify_celestial_object_by_rules(user_input, celestial_info)
+
+
+def _analyze_data_for_visualization(data: dict) -> str:
+    """分析数据特征，为可视化提供建议"""
+    if not data:
+        return "数据为空。"
+    
+    analysis_parts = []
+    
+    # 数据字段检查（已简化，不显示建议）
+    if not analysis_parts:
+        analysis_parts.append("数据字段完整")
+    
+    return "\n".join(analysis_parts)
 
 
 def _classify_celestial_object_by_rules(user_input: str, celestial_info: dict) -> dict:
@@ -79,6 +245,13 @@ def _classify_celestial_object_by_rules(user_input: str, celestial_info: dict) -
         elif any(keyword in user_input_lower or keyword in object_name for keyword in ["星云", "nebula"]):
             primary_category = "星云"
             subcategory = "发射星云"
+        elif "m87" in object_name or "m87" in user_input_lower:
+            primary_category = "星系"
+            subcategory = "椭圆星系"
+        elif object_name.startswith("m") and object_name[1:].isdigit():
+            # 梅西耶天体的一般分类
+            primary_category = "深空天体"
+            subcategory = "梅西耶天体"
         else:
             primary_category = "未分类"
             subcategory = "需要更多信息"
@@ -135,6 +308,7 @@ except Exception as e:
     llm = None
 
 
+@track_node_execution("identity_check")
 def identity_check_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
     """
     身份识别节点 - Command语法实现
@@ -147,56 +321,43 @@ def identity_check_command_node(state: AstroAgentState) -> Command[AstroAgentSta
         if user_input is None or not isinstance(user_input, str):
             raise ValueError("Invalid user_input: must be a non-empty string")
 
-        # 优先检查是否已经在状态中指定了用户类型（来自测试或外部设置）
-        if "user_type" in state and state["user_type"] in ["amateur", "professional"]:
-            user_type = state["user_type"]
-        else:
-            # 使用prompt模板获取身份识别提示词
-            identity_prompt_content = get_prompt("identity_check", user_input=user_input)
-            identity_prompt = ChatPromptTemplate.from_template(identity_prompt_content)
+        # 使用大模型进行身份识别 - 完全依赖LLM判断
+        if llm:
+            identity_prompt = f"""请仔细分析以下用户输入，判断用户是天文爱好者还是专业研究人员。
 
-            # 调用LLM进行身份识别
-            if llm is None:
-                # 临时处理：如果LLM未初始化，使用简单规则判断
-                keywords_professional = [
-                    "分析", "数据", "代码", "编程", "算法", "分类", 
-                    "处理", "计算", "研究", "生成代码", "写代码"
-                ]
-                user_type = (
-                    "professional"
-                    if any(kw in user_input for kw in keywords_professional)
-                    else "amateur"
-                )
-            # 检查输入是否明确指定用户类型
-            elif user_input.lower().startswith("amateur "):
-                user_type = "amateur"
-            elif user_input.lower().startswith("professional "):
-                user_type = "professional"
-            # 优先使用规则判断，避免LLM判断不准确
-            elif any(kw in user_input.lower() for kw in [
-                "代码", "code", "编程", "程序", "算法", "algorithm", 
-                "生成代码", "写代码", "开发", "脚本", "script"
-            ]):
-                user_type = "professional"
-            else:
-                chain = identity_prompt | llm
-                response = chain.invoke({
-                    "user_input": state.get("user_input", ""),
-                    "conversation_history": state.get("conversation_history", []),
-                })
-                user_type = response.content.strip().lower()
+用户输入: {user_input}
+
+判断标准：
+- amateur（爱好者）：询问基础天文知识、概念解释、科普问题、学习性问题
+  例如："什么是黑洞？"、"恒星是如何形成的？"、"银河系有多大？"、"M87是什么？"
+  
+- professional（专业用户）：需要专业分析、数据处理、天体分类、数据检索、图表绘制等
+  例如："M87属于什么类型？"、"分类这个天体：M87"、"获取SDSS星系数据"、"绘制天体位置图"、"分析M87的射电星系特征"
+
+关键区别：
+- 问"是什么"、"如何形成"、"有多大" → amateur（科普问题）
+- 问"属于什么类型"、"分类"、"分析特征" → professional（专业分类/分析）
+
+请仔细分析用户的语言风格、问题深度和专业需求，然后只返回：amateur 或 professional
+"""
+            
+            from langchain_core.messages import HumanMessage
+            messages = [HumanMessage(content=identity_prompt)]
+            response = llm.invoke(messages)
+            user_type = response.content.strip().lower()
                 
-                # 处理可能的student输入，将其归类为amateur
-                if user_type == "student":
+            # 验证响应
+            if user_type not in ["amateur", "professional"]:
+                # 如果LLM返回的不是预期格式，尝试从文本中提取
+                if "professional" in user_type or "专业" in user_type:
+                    user_type = "professional"
+                elif "amateur" in user_type or "爱好者" in user_type or "业余" in user_type:
                     user_type = "amateur"
-                elif user_type not in ["amateur", "professional"]:
-                    # 如果输出不是预期格式，尝试从文本中提取
-                    if "professional" in user_type:
-                        user_type = "professional"
-                    elif "student" in user_type:
-                        user_type = "amateur"
-                    else:
-                        user_type = "amateur"  # 默认为爱好者
+                else:
+                    user_type = "amateur"  # 默认为爱好者
+        else:
+            # 如果LLM不可用，报错而不是使用关键词判断
+            raise Exception("LLM服务不可用，无法进行身份识别")
 
         # 更新状态 - 只更新必要的字段，避免字段冲突
         updated_state = {
@@ -640,14 +801,10 @@ def database_storage_command_node(state: AstroAgentState) -> Command[AstroAgentS
 实时数据检索:
 - 数据源: {', '.join(retrieval_result.get('data_sources_queried', []))}
 - 检索记录: {retrieval_result.get('total_records', 0)} 条
-- 光度数据: V星等 {retrieval_result.get('photometry_data', {}).get('V_magnitude', 'N/A')}
-- 光谱类型: {retrieval_result.get('spectroscopy_data', {}).get('spectral_type', 'N/A')}
-- 距离: {retrieval_result.get('astrometry_data', {}).get('distance', 'N/A')}
 
 数据存储:
 - 数据库: {storage_result['database']}
 - 记录ID: {storage_result['record_id']}
-- 存储大小: {storage_result['storage_size']}
 
 分析流程已完成，所有数据已安全存储到本地数据库。"""
         
@@ -838,205 +995,33 @@ def error_recovery_node(state: AstroAgentState) -> AstroAgentState:
         return error_state
 
 
-def user_choice_handler_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
-    """
-    用户选择处理节点 - Command语法实现
-    处理用户的是/否选择，决定是否继续获取更多信息
-    """
-    try:
-
-        # 获取用户选择（优先使用user_choice字段，兼容user_input）
-        choice_input = state.get("user_choice") or state.get("user_input", "")
-        if choice_input is None:
-            choice_input = ""
-        choice_input = choice_input.strip()
-        
-        # 检查是否为有效的选择输入
-        valid_yes = ["是", "y", "yes", "要", "需要", "1"]
-        valid_no = ["否", "n", "no", "不要", "不需要", "0"]
-        
-        # 添加重试计数器，避免无限循环
-        retry_count = state.get("choice_retry_count", 0)
-        max_retries = 3  # 最多允许3次重试
-        
-        if not choice_input or (choice_input.lower() not in [x.lower() for x in valid_yes + valid_no]):
-            # 输入无效，检查重试次数
-            if retry_count >= max_retries:
-                # 超过最大重试次数，退出对话
-                updated_state = state.copy()
-                updated_state["awaiting_user_choice"] = False
-                updated_state["current_step"] = "invalid_choice_exit"
-                updated_state["is_complete"] = True
-                updated_state["final_answer"] = "多次输入无效，对话已结束。如有其他天文问题，欢迎重新开始咨询。"
-                
-                # 记录执行历史
-                execution_history = updated_state.get("execution_history", [])
-                execution_history.append({
-                    "node": "user_choice_handler_command_node",
-                    "action": "max_retries_exceeded",
-                    "input": choice_input,
-                    "output": "exit_due_to_max_retries",
-                    "timestamp": time.time(),
-                })
-                updated_state["execution_history"] = execution_history
-                
-                return Command(
-                    update=updated_state,
-                    goto="__end__"
-                )
-            else:
-                # 输入无效，保持当前状态等待用户重新输入
-                updated_state = state.copy()
-                updated_state["choice_retry_count"] = retry_count + 1
-                updated_state["current_step"] = "waiting_for_valid_choice"
-                updated_state["awaiting_user_choice"] = True
-                updated_state["is_complete"] = False
-                
-                # 生成更清晰的提示信息
-                retry_prompt = f"输入无效（第{retry_count + 1}次尝试）。请明确回复：\n• '是' 或 'y' - 进入专业模式\n• '否' 或 'n' - 结束对话\n\n您的选择是？"
-                updated_state["final_answer"] = retry_prompt
-                
-                # 记录执行历史
-                execution_history = updated_state.get("execution_history", [])
-                execution_history.append({
-                    "node": "user_choice_handler_command_node",
-                    "action": "invalid_input_retry",
-                    "input": choice_input,
-                    "output": f"retry_{retry_count + 1}",
-                    "timestamp": time.time(),
-                })
-                updated_state["execution_history"] = execution_history
-                
-                # 保持当前状态，设置为等待用户输入状态，不进行节点跳转
-                updated_state["current_step"] = "waiting_for_valid_choice"
-                return Command(
-                    update=updated_state,
-                    goto="__end__"  # 暂时结束，等待用户重新输入
-                )
-        
-        # 解析用户选择
-        choice_lower = choice_input.lower()
-        if choice_lower in ["是", "y", "yes", "要", "需要", "1"]:
-            wants_more_info = True
-        elif choice_lower in ["否", "n", "no", "不要", "不需要", "0"]:
-            wants_more_info = False
-        else:
-            # 这个else分支实际上不会被执行，因为上面已经处理了所有无效输入情况
-            # 但为了代码完整性，保留一个安全的fallback
-            updated_state = state.copy()
-            updated_state["choice_retry_count"] = retry_count + 1
-            updated_state["current_step"] = "waiting_for_valid_choice"
-            updated_state["awaiting_user_choice"] = True
-            updated_state["is_complete"] = False
-            updated_state["final_answer"] = "请明确回复：\n• '是' 或 'y' - 进入专业模式\n• '否' 或 'n' - 结束对话"
-            updated_state["current_step"] = "waiting_for_valid_choice"
-            return Command(
-                update=updated_state,
-                goto="__end__"  # 暂时结束，等待用户重新输入
-            )
-        
-        # 更新状态
-        updated_state = state.copy()
-        updated_state["user_choice"] = "more_info" if wants_more_info else "end"
-        updated_state["awaiting_user_choice"] = False
-        # 重置重试计数器，因为用户已经做出有效选择
-        if "choice_retry_count" in updated_state:
-            del updated_state["choice_retry_count"]
-        
-        # 记录执行历史
-        execution_history = updated_state.get("execution_history", [])
-        execution_history.append({
-            "node": "user_choice_handler_command_node",
-            "action": "process_user_choice",
-            "input": choice_input,
-            "output": "more_info" if wants_more_info else "end",
-            "timestamp": time.time(),
-        })
-        updated_state["execution_history"] = execution_history
-        
-        # 根据用户选择路由
-        if wants_more_info:
-            # 用户想要更多信息，直接进入任务处理
-            # 恢复原始问题并将用户类型改为professional
-            if "original_user_input" in updated_state:
-                updated_state["user_input"] = updated_state["original_user_input"]
-            else:
-                # 如果没有保存原始输入，从执行历史中找到原始问题
-                # 确保context不是简单的'是'/'否'，而是用户的原始天文问题
-                current_input = updated_state.get("user_input", "")
-                if current_input.lower() in ["是", "y", "yes", "要", "需要", "1", "否", "n", "no", "不要", "不需要", "0"]:
-                    # 当前user_input是用户的选择，需要从执行历史中找到原始问题
-                    execution_history = updated_state.get("execution_history", [])
-                    original_question_found = False
-                    for entry in reversed(execution_history):
-                        # 查找identity_check或qa_agent节点的输入，这些包含了用户的原始问题
-                        if (entry.get("node") in ["identity_check_command_node", "qa_agent_command_node"] and 
-                            entry.get("action") in ["process_user_input", "generate_qa_response"] and
-                            entry.get("input") and 
-                            entry.get("input").lower() not in ["是", "y", "yes", "要", "需要", "1", "否", "n", "no", "不要", "不需要", "0"]):
-                            updated_state["user_input"] = entry.get("input")
-                            original_question_found = True
-                            break
-                    
-                    # 如果没有找到原始问题，使用一个默认的提示
-                    if not original_question_found:
-                        updated_state["user_input"] = "请提供您的天文问题以进行专业分析"
-            
-            updated_state["user_type"] = "professional"  # 改为专业用户，跳过重复的身份检查
-            updated_state["current_step"] = "user_chose_more_info"
-            updated_state["is_complete"] = True  # QA阶段已完成
-            updated_state["processing_status"] = "完成"
-            # 添加标记表示来自user_choice_handler，用于task_selector优先选择分类任务
-            updated_state["from_user_choice"] = True
-            updated_state["default_task_type"] = "classification"  # 默认选择分类任务
-            # 清除用户回复内容，避免重复显示
-            updated_state["user_reply"] = ""
-            updated_state["final_answer"] = ""  # 清除之前的QA回答
-            # 不保存用户的"是"回复，清除user_choice字段
-            if "user_choice" in updated_state:
-                del updated_state["user_choice"]
-            # 直接路由到task_selector节点，避免重复执行identity_check和qa_agent
-            return Command(
-                update=updated_state,
-                goto="task_selector"
-            )
-        else:
-            # 用户不需要更多信息，直接结束
-            updated_state["current_step"] = "user_chose_end"
-            updated_state["is_complete"] = True
-            updated_state["final_answer"] = "感谢您的使用！如有其他天文问题，欢迎随时咨询。"
-            # 清除用户回复内容
-            updated_state["user_reply"] = ""
-            return Command(
-                update=updated_state,
-                goto="__end__"
-            )
-    
-    except Exception as e:
-        # 错误处理
-
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "user_choice_handler_command_node",
-            "error": str(e),
-            "timestamp": time.time(),
-        }
-        error_state["awaiting_user_choice"] = False
-        
-        return Command(
-            update=error_state,
-            goto="error_recovery"
-        )
-
-
+@track_node_execution("qa_agent")
 def qa_agent_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
     """
-    QA问答节点 - Command语法实现
-    处理爱好者的天文问答并根据用户类型直接路由
+    QA问答节点 - 简化版本，集成Tavily搜索，直接结束
+    处理爱好者的天文问答，不再提供专业模式选择
     """
     try:
         user_input = state["user_input"]
         user_type = state.get("user_type", "amateur")
+
+        # 集成Tavily搜索获取最新信息
+        search_results = ""
+        tavily_success = False
+        try:
+            from src.tools.tavily_search.tavily_search_api_wrapper import tavily_search
+            search_query = f"天文 {user_input}"
+            search_results = tavily_search(search_query, max_results=3)
+            if search_results:
+                # 让AI判断搜索结果质量，而不是硬编码过滤
+                search_info = "\n\n📚 最新相关信息：\n"
+                for i, result in enumerate(search_results[:2], 1):
+                    search_info += f"{i}. {result.get('title', '无标题')}\n{result.get('content', '无内容')[:200]}...\n\n"
+                search_results = search_info
+                tavily_success = True
+        except Exception as e:
+            print(f"Tavily搜索失败: {e}")
+            search_results = ""
 
         # 使用prompt模板获取QA提示词
         try:
@@ -1055,65 +1040,49 @@ def qa_agent_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
         else:
             chain = qa_prompt | llm
             response = chain.invoke({"user_input": user_input, "user_type": user_type})
-            response_content = response.content
+            # 确保 response_content 是字符串
+            if hasattr(response, 'content'):
+                response_content = str(response.content)
+            else:
+                response_content = str(response)
+
+        # 组合回答和搜索结果
+        final_response = response_content + search_results
+        
+        # 如果 Tavily 搜索成功并返回了结果，添加成功通知
+        if tavily_success and search_results:
+            final_response += "\n\n🔍 [Tavily 搜索已成功获取最新信息]"
 
         # 更新状态
         updated_state = state.copy()
-        updated_state["qa_response"] = response_content
-        updated_state["qa_completed"] = True  # 标记QA已完成
-        
-        # 为amateur用户添加交互式询问机制
-        if user_type == "amateur":
-            # 保存原始user_input，以便在用户选择"是"时恢复
-            updated_state["original_user_input"] = user_input
-            # 在QA回答后添加询问提示
-            enhanced_response = response_content + "\n\n💫 想要了解更专业的天体分类和数据分析吗？\n请回复：\n• '是' 或 'y' - 进入专业模式\n• '否' 或 'n' - 结束对话"
-            updated_state["final_answer"] = enhanced_response
-            updated_state["current_step"] = "waiting_for_valid_choice"
-            updated_state["is_complete"] = False
-            updated_state["awaiting_user_choice"] = True
-        else:
-            # professional用户保持原有逻辑
-            updated_state["final_answer"] = response_content
-            updated_state["current_step"] = "qa_completed_continue"
-            updated_state["is_complete"] = False
+        updated_state["qa_response"] = final_response
+        updated_state["final_answer"] = final_response
+        updated_state["current_step"] = "qa_completed"
+        updated_state["is_complete"] = True
+        updated_state["task_type"] = "qa"
 
         # 添加助手消息
         if "messages" not in updated_state:
             updated_state["messages"] = []
-        
-        if user_type == "amateur":
-            updated_state["messages"].append({"role": "assistant", "content": enhanced_response})
-        else:
-            updated_state["messages"].append({"role": "assistant", "content": response_content})
+        updated_state["messages"].append({"role": "assistant", "content": final_response})
 
         # 记录执行历史
         execution_history = updated_state.get("execution_history", [])
         execution_history.append({
             "node": "qa_agent_command_node",
-            "action": "generate_qa_response",
+            "action": "generate_qa_response_with_search",
             "input": user_input,
-            "output": response_content,
+            "output": final_response,
             "timestamp": time.time(),
         })
         
-        # 注释：移除重复的waiting_for_valid_choice添加，避免execution_history重复
-        
         updated_state["execution_history"] = execution_history
 
-        # 根据用户类型路由
-        if user_type == "professional":
-            # 专业用户直接进入任务选择器
-            return Command(
-                update=updated_state,
-                goto="task_selector"
-            )
-        else:
-            # amateur用户等待用户选择
-            return Command(
-                update=updated_state,
-                goto="user_choice_handler"
-            )
+        # 直接结束，不再询问是否进入专业模式
+        return Command(
+            update=updated_state,
+            goto="__end__"
+        )
 
     except Exception as e:
         # 错误处理
@@ -1134,6 +1103,7 @@ def qa_agent_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
         )
 
 
+@track_node_execution("classification_config")
 def classification_config_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
     """
     天体分类配置节点 - Command语法实现
@@ -1161,40 +1131,16 @@ def classification_config_command_node(state: AstroAgentState) -> Command[AstroA
 
         # 调用LLM进行天体分类
         llm = get_llm_by_type("basic")
-        if llm is None or config_prompt_content is None:
+        if llm is None:
             # 使用增强的基于规则的分类逻辑
             classification_result = _classify_celestial_object_by_rules(
                 user_input, celestial_info
             )
         else:
             try:
-                # 直接调用LLM，避免模板解析问题
-                from langchain_core.messages import HumanMessage
-
-                messages = [HumanMessage(content=config_prompt_content)]
-                response = llm.invoke(messages)
-                
-                try:
-                    import json
-                    # 清理响应内容，移除markdown代码块格式
-                    response_content = response.content.strip()
-                    if response_content.startswith("```json"):
-                        response_content = response_content[7:]  # 移除开头的```json
-                    if response_content.endswith("```"):
-                        response_content = response_content[:-3]  # 移除结尾的```
-                    response_content = response_content.strip()
-
-                    config_response = json.loads(response_content)
-                    
-                    # LLM调用成功，但我们仍然使用基于规则的分类逻辑来确保准确性
-                    # 因为LLM返回的是配置信息，而不是分类结果
-                    classification_result = _classify_celestial_object_by_rules(
-                        user_input, celestial_info
-                    )
-                except Exception:
-                    # 如果JSON解析失败，使用基于规则的分类逻辑作为fallback
-                    classification_result = _classify_celestial_object_by_rules(
-                        user_input, celestial_info
+                # 使用LLM进行智能天体分类（参考complete_simple_system.py）
+                classification_result = _classify_celestial_object_with_llm(
+                    user_input, celestial_info, llm
                     )
             except Exception:
                 # LLM调用失败时使用基于规则的分类逻辑作为fallback
@@ -1216,10 +1162,20 @@ def classification_config_command_node(state: AstroAgentState) -> Command[AstroA
         
         if simbad_result.get('found', False):
             # 从SIMBAD获取到数据
-            real_coordinates = {
-                "ra": simbad_result.get('coordinates', {}).get('ra', None),
-                "dec": simbad_result.get('coordinates', {}).get('dec', None)
-            }
+            ra_val = simbad_result.get('coordinates', {}).get('ra', None)
+            dec_val = simbad_result.get('coordinates', {}).get('dec', None)
+            
+            # 确保坐标值是数字类型
+            try:
+                ra_val = float(ra_val) if ra_val is not None else None
+            except (ValueError, TypeError):
+                ra_val = None
+            try:
+                dec_val = float(dec_val) if dec_val is not None else None
+            except (ValueError, TypeError):
+                dec_val = None
+                
+            real_coordinates = {"ra": ra_val, "dec": dec_val}
             real_magnitude = simbad_result.get('magnitude', None)
             object_name = simbad_result.get('object_name', object_name)
         else:
@@ -1227,96 +1183,28 @@ def classification_config_command_node(state: AstroAgentState) -> Command[AstroA
             real_coordinates = coordinates if coordinates.get("ra") and coordinates.get("dec") else {"ra": None, "dec": None}
             real_magnitude = None
         
-        # 构建检索结果（包含真实坐标和星等信息）
+        # 构建检索结果（只显示真实查询的数据源和字段）
+        data_sources = ["SIMBAD"] if simbad_result.get('found', False) else []
         retrieval_result = {
-            "status": "success",
-            "data_sources_queried": ["SIMBAD", "NED", "VizieR"],
-            "total_records": 42,
-            "coordinates": real_coordinates,
-            "photometry_data": {
-                "magnitude": real_magnitude if real_magnitude else 11.8,
-                "B_magnitude": 12.5,
-                "V_magnitude": real_magnitude if real_magnitude else 11.8,
-                "R_magnitude": 11.2,
-                "color_index_BV": 0.7
-            },
-            "spectroscopy_data": {
-                "spectral_type": "G2V",
-                "radial_velocity": "15.2 km/s",
-                "metallicity": "[Fe/H] = -0.1"
-            },
-            "astrometry_data": {
-                "proper_motion_ra": "12.3 mas/yr",
-                "proper_motion_dec": "-8.7 mas/yr",
-                "parallax": "25.4 mas",
-                "distance": "39.4 pc"
-            },
+            "status": "success" if simbad_result.get('found', False) else "no_data",
+            "data_sources_queried": data_sources,
+            "total_records": 1 if simbad_result.get('found', False) else 0,
             "query_timestamp": time.time()
         }
         
-        # === 集成数据库存储功能 ===
-        # 初始化数据库
-        db = LocalDatabase()
+        # 只添加SIMBAD实际返回的字段
+        if simbad_result.get('found', False):
+            retrieval_result["coordinates"] = real_coordinates
+            retrieval_result["object_type"] = simbad_result.get('object_type', 'Unknown')
+            if real_magnitude is not None:
+                retrieval_result["magnitude"] = real_magnitude
         
-        # 准备天体对象数据
-        magnitude = retrieval_result.get("photometry_data", {}).get("magnitude")
-        
-        # 创建天体对象
-        current_time = time.strftime('%Y-%m-%d %H:%M:%S')
-        celestial_obj = CelestialObject(
-            name=object_name,
-            object_type=object_type,
-            coordinates=real_coordinates if real_coordinates else {"ra": 0.0, "dec": 0.0},
-            magnitude=magnitude,
-            spectral_class=retrieval_result.get("spectroscopy_data", {}).get("spectral_type"),
-            distance=retrieval_result.get("astrometry_data", {}).get("distance"),
-            metadata={
-                "retrieval_data": retrieval_result,
-                "user_input": user_input,
-                "session_id": state.get("session_id", "")
-            },
-            created_at=current_time,
-            updated_at=current_time
-        )
-        
-        # 保存天体对象到数据库
-        object_id = db.add_celestial_object(celestial_obj)
-        
-        # 创建分类结果
-        classification_obj = ClassificationResult(
-            object_id=object_id,
-            classification=celestial_info_result.get("detailed_classification", "Unknown"),
-            confidence=0.8 if celestial_info_result.get("confidence_level") == "中等" else 0.5,
-            method="rule_based",
-            details={
-                "primary_category": celestial_info_result.get("primary_category"),
-                "subcategory": celestial_info_result.get("subcategory"),
-                "key_features": celestial_info_result.get("key_features", []),
-                "explanation": classification_result.get("explanation", ""),
-                "suggestions": classification_result.get("suggestions", [])
-            }
-        )
-        
-        # 保存分类结果到数据库
-        classification_id = db.add_classification_result(classification_obj)
-        
-        # 构建存储结果
-        storage_result = {
-            "status": "success",
-            "database": "astro_insight.db",
-            "table": "celestial_objects",
-            "record_id": f"obj_{object_id}",
-            "classification_id": f"cls_{classification_id}",
-            "records_stored": 2,  # 天体对象 + 分类结果
-            "storage_size": "实际存储",
-            "storage_timestamp": time.time()
-        }
+        # 分类任务不需要存储数据，直接返回分析结果
 
         # 更新状态
         updated_state = state.copy()
         updated_state["classification_result"] = classification_result
         updated_state["retrieval_result"] = retrieval_result
-        updated_state["storage_result"] = storage_result
         updated_state["classification_config"] = {
             "configured": True,
             "celestial_info": celestial_info,
@@ -1350,27 +1238,68 @@ def classification_config_command_node(state: AstroAgentState) -> Command[AstroA
         
         # 生成最终答案
         coord_display = f"RA={real_coordinates.get('ra', 'N/A')}, DEC={real_coordinates.get('dec', 'N/A')}"
+        magnitude = real_magnitude if real_magnitude is not None else "N/A"
+        
+        # 分析数据特征，为可视化提供建议
+        data_analysis = _analyze_data_for_visualization(retrieval_result)
+        
+        # 构建详细的分类结果显示
+        simbad_classification = ""
+        if simbad_result.get('found', False):
+            # 动态构建分类层次 - 基于SIMBAD实际返回的数据
+            hierarchy = simbad_result.get('hierarchy', [])
+            
+            # 如果没有hierarchy字段，根据其他字段动态构建
+            if not hierarchy:
+                main_cat = simbad_result.get('main_category', '')
+                sub_cat = simbad_result.get('sub_category', '')
+                detailed = simbad_result.get('detailed_classification', '')
+                
+                # 动态构建层次结构
+                hierarchy = ['天体']  # 顶层总是天体
+                if main_cat and main_cat != 'Unknown':
+                    hierarchy.append(main_cat)
+                if sub_cat and sub_cat != 'Unknown' and sub_cat != main_cat:
+                    hierarchy.append(sub_cat)
+                if detailed and detailed != 'Unknown' and detailed != sub_cat:
+                    hierarchy.append(detailed)
+            
+            # 构建缩进式层次结构
+            hierarchy_tree = ""
+            if hierarchy:
+                for i, level in enumerate(hierarchy):
+                    indent = "  " * i  # 每层缩进2个空格
+                    if i == 0:
+                        hierarchy_tree += f"{indent}└─ {level}\n"
+                    else:
+                        hierarchy_tree += f"{indent}└─ {level}\n"
+                hierarchy_tree = hierarchy_tree.rstrip()  # 移除最后的换行符
+            else:
+                hierarchy_tree = "N/A"
+            
+            # 构建LLM增强的分类信息显示
+        similar_objects = simbad_result.get('similar_objects', [])
+        object_properties = simbad_result.get('object_properties', [])
+        formation_mechanism = simbad_result.get('formation_mechanism', '')
+        observational_features = simbad_result.get('observational_features', [])
+        evolutionary_stage = simbad_result.get('evolutionary_stage', '')
+        
+        simbad_classification = f"""
+SIMBAD分类详情:
+- SIMBAD类型: {simbad_result.get('object_type', 'N/A')}
+- 分类层次:
+{hierarchy_tree}
+- 关键特征: {simbad_result.get('key_features', 'N/A')}
+- 置信度: {simbad_result.get('confidence', 'N/A')}"""
+
         
         final_answer = f"""天体分析完成！
         
 天体名称: {object_name}
-分类结果: {object_type}
+分类结果: {object_type}{simbad_classification}
 坐标: {coord_display}
-星等: {magnitude}
 
-实时数据检索:
-- 数据源: {', '.join(retrieval_result.get('data_sources_queried', []))}
-- 检索记录: {retrieval_result.get('total_records', 0)} 条
-- 光度数据: V星等 {retrieval_result.get('photometry_data', {}).get('V_magnitude', 'N/A')}
-- 光谱类型: {retrieval_result.get('spectroscopy_data', {}).get('spectral_type', 'N/A')}
-- 距离: {retrieval_result.get('astrometry_data', {}).get('distance', 'N/A')}
-
-数据存储:
-- 数据库: {storage_result['database']}
-- 记录ID: {storage_result['record_id']}
-- 存储大小: {storage_result['storage_size']}
-
-分析流程已完成，所有数据已安全存储到本地数据库。"""
+{data_analysis}"""
         
         updated_state["final_answer"] = final_answer
 
@@ -1790,6 +1719,7 @@ if __name__ == "__main__":
         )
 
 
+@track_node_execution("task_selector")
 def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
     """
     任务选择节点 - Command语法实现
@@ -1799,9 +1729,23 @@ def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentStat
         user_input = state["user_input"]
         user_type = state.get("user_type", "amateur")
         
-        # 检查是否来自user_choice_handler，如果是则使用默认任务类型
+        # 检查是否来自user_choice_handler，如果是则根据原始问题选择任务类型
         if state.get("from_user_choice", False):
-            task_type = state.get("default_task_type", "classification")
+            # 从执行历史中找到原始问题
+            execution_history = state.get("execution_history", [])
+            original_question = None
+            for entry in reversed(execution_history):
+                if (entry.get("node") in ["identity_check_command_node", "qa_agent_command_node"] and 
+                    entry.get("action") in ["process_user_input", "generate_qa_response"] and
+                    entry.get("input") and 
+                    entry.get("input").lower() not in ["是", "y", "yes", "要", "需要", "1", "否", "n", "no", "不要", "不需要", "0"]):
+                    original_question = entry.get("input")
+                    break
+            
+            if original_question:
+                user_input = original_question
+            else:
+                user_input = state["user_input"]
         else:
             # 获取LLM实例
             llm = get_llm_by_type("basic")
@@ -1816,54 +1760,49 @@ def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentStat
                 # 继续执行，不依赖prompt模板
                 task_prompt = None
 
-            # 简单规则判断任务类型（优先使用规则，避免LLM调用失败）
-            # 优先检查代码生成相关关键词（更具体的任务）
-            if any(kw in user_input.lower() for kw in ["代码", "code", "编程", "程序"]) or \
-               ("生成" in user_input.lower() and any(kw in user_input.lower() for kw in ["代码", "code", "程序", "脚本", "script"])):
-                task_type = "code_generation"
-            elif any(kw in user_input.lower() for kw in ["分类", "classify", "classification"]):
-                task_type = "classification"
-            # 检查是否包含天体名称，如果包含则优先识别为分类任务
-            elif any(celestial_name in user_input.lower() for celestial_name in [
-                "仙女座星系", "andromeda galaxy", "猎户座大星云", "orion nebula", 
-                "仙女座", "andromeda", "猎户座", "orion", "北极星", "polaris", 
-                "天狼星", "sirius", "织女星", "vega", "牛郎星", "altair",
-                "太阳", "sun", "月亮", "moon", "火星", "mars", "木星", "jupiter",
-                "土星", "saturn", "金星", "venus", "水星", "mercury", "天王星", "uranus", "海王星", "neptune",
-                "银河系", "milky way", "星云", "nebula", "星团", "cluster", "黑洞", "black hole",
-                "白矮星", "white dwarf", "中子星", "neutron star", "超新星", "supernova",
-                "彗星", "comet", "小行星", "asteroid", "流星", "meteor"
-            ]):
-                task_type = "classification"
-            elif any(kw in user_input.lower() for kw in ["分析", "analysis", "analyze"]):
-                task_type = "analysis"
-            elif any(kw in user_input.lower() for kw in ["数据", "data", "检索", "retrieval"]):
-                task_type = "data_retrieval"
-            elif any(kw in user_input.lower() for kw in ["文献", "literature", "论文", "paper"]):
-                task_type = "literature_review"
+            # 使用大模型进行任务类型识别 - 完全依赖LLM判断
+            if llm:
+                task_prompt = f"""请仔细分析以下专业用户输入，识别具体的任务类型。
+
+用户输入: {user_input}
+
+任务类型定义：
+- classification: 天体分类任务（识别天体类型）
+  例如："这是哪种天体？"、"M87属于什么类型？"、"分类这个天体"、"识别天体类型"
+  
+- retrieval: 数据检索任务（获取和分析数据）
+  例如："分析M87的射电星系特征"、"获取星系数据"、"查询SDSS数据"、"检索天体信息"、"分析天体特征"、"研究天体性质"
+  
+- visualization: 绘制图表任务（生成图像和图表）
+  例如："绘制天体位置图"、"生成光谱图"、"可视化数据"、"创建图表"、"制作图像"、"绘制分布图"
+
+关键区别：
+- classification: 问"是什么类型"、"属于什么分类"
+- retrieval: 问"分析特征"、"研究性质"、"获取数据"、"分析数据"
+- visualization: 问"绘制"、"生成图表"、"可视化"
+
+请仔细分析用户的具体需求，然后只返回：classification、retrieval 或 visualization
+"""
+                
+                from langchain_core.messages import HumanMessage
+                messages = [HumanMessage(content=task_prompt)]
+                response = llm.invoke(messages)
+                task_type = response.content.strip().lower()
+                
+                # 验证响应
+                if task_type not in ["classification", "retrieval", "visualization"]:
+                    # 如果LLM返回的不是预期格式，尝试从文本中提取
+                    if "classification" in task_type or "分类" in task_type:
+                        task_type = "classification"
+                    elif "retrieval" in task_type or "检索" in task_type or "数据" in task_type:
+                        task_type = "retrieval"
+                    elif "visualization" in task_type or "可视化" in task_type or "图表" in task_type:
+                        task_type = "visualization"
+                    else:
+                        task_type = "classification"  # 默认为分类任务
             else:
-                # 尝试使用LLM进行更精确的判断
-                if llm is not None and task_prompt is not None:
-                    try:
-                        chain = task_prompt | llm
-                        response = chain.invoke({
-                            "user_input": user_input,
-                            "user_type": user_type,
-                            "conversation_history": state.get("conversation_history", []),
-                        })
-                        llm_task_type = response.content.strip().lower()
-                        
-                        # 标准化任务类型
-                        if llm_task_type in ["classification", "code_generation", "analysis", 
-                                           "data_retrieval", "literature_review"]:
-                            task_type = llm_task_type
-                        else:
-                            task_type = "classification"  # 默认分类任务
-                    except Exception as e:
-                        logger.warning(f"LLM任务类型识别失败: {e}")
-                        task_type = "classification"  # 默认分类任务
-                else:
-                    task_type = "classification"  # 默认分类任务
+                # 如果LLM不可用，报错而不是使用关键词判断
+                raise Exception("LLM服务不可用，无法进行任务类型识别")
             
             updated_state = state.copy()
 
@@ -1891,36 +1830,28 @@ def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentStat
         })
         updated_state["execution_history"] = execution_history
         
-        # 路由逻辑
+        # 路由逻辑 - 简化为三个主要任务类型
         if task_type == "classification":
             return Command(
                 update=updated_state,
                 goto="classification_config"
             )
-        elif task_type == "code_generation":
+        elif task_type == "retrieval":
             return Command(
                 update=updated_state,
-                goto="code_generator"
+                goto="data_retrieval"
             )
-        elif task_type == "analysis":
+        elif task_type == "visualization":
             return Command(
                 update=updated_state,
-                goto="analyzer"
-            )
-        elif task_type == "data_retrieval":
-            return Command(
-                update=updated_state,
-                goto="data_retriever"
-            )
-        elif task_type == "literature_review":
-            return Command(
-                update=updated_state,
-                goto="literature_reviewer"
+                goto="visualization"
             )
         else:
+            # 默认分类任务
+            updated_state["task_type"] = "classification"
             return Command(
                 update=updated_state,
-                goto="error_recovery"
+                goto="classification_config"
             )
 
     except Exception as e:
@@ -1936,6 +1867,119 @@ def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentStat
         return Command(
             update=error_state,
             goto="error_recovery"
+        )
+
+
+@track_node_execution("data_retrieval")
+def data_retrieval_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
+    """
+    数据检索节点 - 处理专业用户的数据检索任务
+    """
+    try:
+        user_input = state["user_input"]
+        
+        # 更新状态
+        updated_state = state.copy()
+        updated_state["current_step"] = "data_retrieval_completed"
+        updated_state["is_complete"] = True
+        updated_state["final_answer"] = f"数据检索功能正在开发中。\n\n您的请求：{user_input}\n\n此功能将支持：\n- SDSS数据检索\n- SIMBAD数据库查询\n- 天文数据可视化\n- 数据导出功能"
+        
+        # 记录执行历史
+        execution_history = updated_state.get("execution_history", [])
+        execution_history.append({
+            "node": "data_retrieval_command_node",
+            "action": "data_retrieval_placeholder",
+            "input": user_input,
+            "output": "数据检索功能开发中",
+            "timestamp": time.time()
+        })
+        updated_state["execution_history"] = execution_history
+        
+        return Command(
+            update=updated_state,
+            goto="__end__"
+        )
+        
+    except Exception as e:
+        # 错误处理
+        error_state = state.copy()
+        error_state["error_info"] = {
+            "node": "data_retrieval_command_node",
+            "error": str(e),
+            "timestamp": time.time(),
+        }
+        error_state["final_answer"] = f"数据检索过程中发生错误：{str(e)}"
+        error_state["is_complete"] = True
+        
+        return Command(
+            update=error_state,
+            goto="__end__"
+        )
+
+
+@track_node_execution("visualization")
+def visualization_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
+    """
+    可视化节点 - 处理专业用户的图表绘制任务
+    """
+    try:
+        user_input = state["user_input"]
+        
+        # 生成可视化代码
+        visualization_code = _generate_visualization_code(user_input)
+        
+        # 更新状态
+        updated_state = state.copy()
+        updated_state["current_step"] = "visualization_completed"
+        updated_state["is_complete"] = True
+        updated_state["generated_code"] = visualization_code
+        updated_state["final_answer"] = f"""图表绘制代码已生成！
+
+您的请求：{user_input}
+
+生成的Python代码：
+```python
+{visualization_code}
+```
+
+此代码包含：
+- 📈 散点图 - 显示坐标分布
+- 📊 柱状图 - 统计天体类型分布  
+- 🌟 星等分布图 - 显示亮度分布
+- 🗺️ 天空分布图 - 显示天体在天空中的位置
+
+您可以直接运行此代码来生成可视化图表。"""
+        
+        # 记录执行历史
+        execution_history = updated_state.get("execution_history", [])
+        execution_history.append({
+            "node": "visualization_command_node",
+            "action": "generate_visualization_code",
+            "input": user_input,
+            "output": "可视化代码已生成",
+            "timestamp": time.time()
+        })
+        updated_state["execution_history"] = execution_history
+        
+        return Command(
+            update=updated_state,
+            goto="__end__"
+        )
+
+    except Exception as e:
+        # 错误处理
+        error_state = state.copy()
+        error_state["error_info"] = {
+            "node": "visualization_command_node",
+            "error": str(e),
+            "timestamp": time.time(),
+        }
+        error_state["final_answer"] = f"图表绘制过程中发生错误：{str(e)}"
+        error_state["is_complete"] = True
+        
+        return Command(
+            update=error_state,
+            goto="__end__"
         )
 
 

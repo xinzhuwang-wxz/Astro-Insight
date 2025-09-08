@@ -162,7 +162,7 @@ class CompleteSimpleAstroSystem:
             return user_type.value if hasattr(user_type, 'value') else str(user_type)
         except Exception as e:
             print(f"User service failed, using fallback: {e}")
-        
+        ie
         # 规则识别
         professional_keywords = [
             "分析", "数据", "代码", "编程", "算法", "分类", 

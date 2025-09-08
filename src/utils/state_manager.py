@@ -199,6 +199,12 @@ class StateManager:
         """格式化结果信息"""
         parts = []
         
+        # 最终答案（优先级最高）
+        if state.get("final_answer"):
+            parts.append("\n【最终结果】")
+            parts.append(state["final_answer"])
+            return "\n".join(parts)
+        
         # QA响应
         if state.get("qa_response"):
             parts.append("\n【QA回答】")

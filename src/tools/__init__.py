@@ -1,26 +1,9 @@
 #!/usr/bin/env python3
 """
 Astro Insight 工具模块
-提供语言处理、缓存管理、错误处理等功能
+提供缓存管理、错误处理等功能
+注意：翻译功能已移除，使用LLM进行语言处理
 """
-
-# 语言处理模块
-from .language_processor import (
-    LanguageProcessor,
-    LanguageDetectionResult,
-    TranslationResult,
-    CelestialObjectExtraction,
-    language_processor,
-    detect_language,
-    translate_to_english,
-    extract_celestial_object,
-    process_classification_query
-)
-
-# 为了兼容性，创建translate_text函数
-def translate_text(text: str, target_language: str = "en", source_language: str = "auto"):
-    """翻译文本函数"""
-    return language_processor.translate_text(text, target_language, source_language)
 
 # 创建占位符函数和类，避免导入错误
 class ExtractedCelestialObject:
@@ -90,35 +73,24 @@ def with_retry(func):
 
 # 导出所有需要的符号
 __all__ = [
-    # 语言处理
-    "language_processor",
-    "translate_text",
-    "LanguageDetectionResult",
-    "TranslationResult",
-    "CelestialObjectExtraction",
-    "detect_language",
-    "translate_to_english",
-    "extract_celestial_object",
-    "process_classification_query",
-    
-    # 天体名称提取
+    # 天体名称提取（占位符）
     "enhanced_name_extractor",
     "extract_celestial_names",
     "ExtractedCelestialObject",
     
-    # 并发查询
+    # 并发查询（占位符）
     "query_manager",
     "celestial_query_engine",
     "QueryResult",
     "ConcurrentQueryManager",
     
-    # 缓存管理
+    # 缓存管理（占位符）
     "cache_manager",
     "CacheEntry",
     "LRUCache",
     "CacheManager",
     
-    # 错误处理
+    # 错误处理（占位符）
     "error_handler",
     "with_retry",
     "ErrorCategory",
