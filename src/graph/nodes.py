@@ -62,7 +62,7 @@ def track_node_execution(node_name: str):
         return wrapper
     return decorator
 # from src.tools.language_processor import language_processor  # 暂时未使用
-from src.database.local_storage import LocalDatabase, CelestialObject, ClassificationResult
+# 存储功能已移除 - 分类节点不再需要数据库存储
 
 
 def _extract_celestial_name_simple(user_input: str) -> str:
@@ -403,596 +403,16 @@ def identity_check_command_node(state: AstroAgentState) -> Command[AstroAgentSta
         )
 
 
-def store_classification_result_command_node(classification_data: dict) -> dict:
-    """
-    存储用户提供的天体分类结果到数据库
-    
-    Args:
-        classification_data: 包含天体分类信息的字典
-        
-    Returns:
-        存储结果字典
-    """
-    try:
-        # 导入必要的模块
-        from src.database.local_storage import DataManager, CelestialObject, ClassificationResult
-        from src.code_generation.templates import query_simbad_by_name
-        import time
-        
-        # 初始化数据库管理器
-        data_manager = DataManager()
-        
-        # 解析分类数据
-        object_name = classification_data.get("天体名称", "Unknown")
-        primary_category = classification_data.get("主要分类", "")
-        subcategory = classification_data.get("子分类", "")
-        detailed_classification = classification_data.get("详细分类", "")
-        confidence = classification_data.get("置信度", "中等")
-        key_features = classification_data.get("关键特征", "")
-        coordinates_str = classification_data.get("坐标", "RA=None, DEC=None")
-        magnitude = classification_data.get("附加信息", {}).get("magnitude")
-        explanation = classification_data.get("解释", "")
-        suggestions = classification_data.get("建议", "")
-        
-        # 解析坐标
-        coordinates = {"ra": None, "dec": None}
-        if "RA=" in coordinates_str and "DEC=" in coordinates_str:
-            try:
-                parts = coordinates_str.split(", ")
-                ra_part = parts[0].split("=")[1].strip()
-                dec_part = parts[1].split("=")[1].strip()
-                if ra_part != "None":
-                    coordinates["ra"] = float(ra_part)
-                if dec_part != "None":
-                    coordinates["dec"] = float(dec_part)
-            except (ValueError, IndexError):
-                pass  # 保持默认值
-        
-        # 转换置信度为数值
-        confidence_mapping = {
-            "高": 0.9,
-            "中等": 0.7,
-            "低": 0.5,
-            "很高": 0.95,
-            "很低": 0.3
-        }
-        confidence_value = confidence_mapping.get(confidence, 0.7)
-        
-        # 转换分类类型为英文
-        type_mapping = {
-            "星系": "galaxy",
-            "恒星": "star",
-            "星云": "nebula",
-            "超新星": "supernova",
-            "行星": "planet",
-            "小行星": "asteroid",
-            "彗星": "comet",
-            "双星": "binary_star"
-        }
-        object_type = type_mapping.get(primary_category, primary_category.lower())
-        
-        # 创建天体对象
-        celestial_object = CelestialObject(
-            name=object_name,
-            object_type=object_type,
-            coordinates=coordinates,
-            magnitude=magnitude,
-            metadata={
-                "subcategory": subcategory,
-                "detailed_classification": detailed_classification,
-                "key_features": key_features,
-                "explanation": explanation,
-                "suggestions": suggestions,
-                "source": "user_input"
-            }
-        )
-        
-        # 添加天体对象到数据库
-        object_id = data_manager.db.add_celestial_object(celestial_object)
-        
-        # 创建分类结果
-        classification_result = ClassificationResult(
-            object_id=object_id,
-            classification=detailed_classification or f"{primary_category} - {subcategory}",
-            confidence=confidence_value,
-            method="user_input",
-            details={
-                "primary_category": primary_category,
-                "subcategory": subcategory,
-                "key_features": key_features,
-                "explanation": explanation,
-                "suggestions": suggestions,
-                "confidence_level": confidence
-            }
-        )
-        
-        # 添加分类结果到数据库
-        classification_id = data_manager.db.add_classification_result(classification_result)
-        
-        # 尝试实时抓取补充数据
-        retrieval_result = None
-        try:
-            # 使用SIMBAD查询补充信息
-            simbad_data = query_simbad_by_name(object_name)
-            if simbad_data and simbad_data.get("status") == "success":
-                retrieval_result = {
-                    "status": "success",
-                    "source": "SIMBAD",
-                    "data": simbad_data.get("data", {}),
-                    "timestamp": time.time()
-                }
-                
-                # 更新天体对象的元数据
-                updated_metadata = celestial_object.metadata.copy()
-                updated_metadata["simbad_data"] = simbad_data.get("data", {})
-                
-                # 这里可以添加更新数据库记录的逻辑
-                
-        except Exception as e:
-            retrieval_result = {
-                "status": "error",
-                "error": str(e),
-                "timestamp": time.time()
-            }
-        
-        # 返回存储结果
-        storage_result = {
-            "status": "success",
-            "message": f"天体 '{object_name}' 的分类结果已成功存储到数据库",
-            "object_id": object_id,
-            "classification_id": classification_id,
-            "database_path": data_manager.db.db_path,
-            "retrieval_result": retrieval_result,
-            "stored_data": {
-                "object_name": object_name,
-                "classification": detailed_classification or f"{primary_category} - {subcategory}",
-                "confidence": confidence_value,
-                "coordinates": coordinates,
-                "magnitude": magnitude
-            },
-            "timestamp": time.time()
-        }
-        
-        return storage_result
-        
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"存储天体分类结果时发生错误: {str(e)}",
-            "error": str(e),
-            "timestamp": time.time()
-        }
+# 存储功能已移除 - 分类节点不再需要数据库存储
 
 
-def real_time_retrieval_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
-    """
-    实时数据检索节点 - Command语法实现
-    从SIMBAD、NED、VizieR等外部数据库实时检索天体数据
-    """
-    try:
-        # 从分类结果中获取天体信息
-        classification_result = state.get("classification_result", {})
-        celestial_info = classification_result.get("classification_result", {})
-        
-        # 提取天体信息
-        object_name = celestial_info.get("object_name", "Unknown")
-        object_type = celestial_info.get("primary_category", "Unknown")
-        coordinates = celestial_info.get("coordinates", {})
-        
-        # 尝试从用户输入中提取更多信息
-        user_input = state.get("user_input", "")
-        
-        # 尝试从SIMBAD获取实时数据
-        from src.code_generation.templates import query_simbad_by_name
-        
-        # 首先尝试SIMBAD查询
-        # 首先尝试从SIMBAD获取数据
-        simbad_result = query_simbad_by_name(object_name)
-        
-        if simbad_result.get('found', False):
-            # 从SIMBAD获取到数据
-            real_coordinates = {
-                "ra": simbad_result.get('coordinates', {}).get('ra', None),
-                "dec": simbad_result.get('coordinates', {}).get('dec', None)
-            }
-            real_magnitude = simbad_result.get('magnitude', None)
-            object_name = simbad_result.get('object_name', object_name)
-        else:
-            # 如果SIMBAD没有找到，使用现有坐标或标记为未找到
-            real_coordinates = coordinates if coordinates.get("ra") and coordinates.get("dec") else {"ra": None, "dec": None}
-            real_magnitude = None
-        
-        # 构建检索配置
-        retrieval_config = {
-            "target_object": object_name,
-            "object_type": object_type,
-            "coordinates": real_coordinates,
-            "data_sources": ["SIMBAD", "NED", "VizieR"],
-            "query_parameters": {
-                "radius": "5 arcmin",
-                "catalog_filters": ["photometry", "spectroscopy", "proper_motion"],
-                "max_results": 100
-            }
-        }
-        
-        # 构建检索结果（包含真实坐标和星等信息）
-        retrieval_result = {
-            "status": "success",
-            "data_sources_queried": ["SIMBAD", "NED", "VizieR"],
-            "total_records": 42,
-            "coordinates": real_coordinates,
-            "photometry_data": {
-                "magnitude": real_magnitude if real_magnitude else 11.8,
-                "B_magnitude": 12.5,
-                "V_magnitude": real_magnitude if real_magnitude else 11.8,
-                "R_magnitude": 11.2,
-                "color_index_BV": 0.7
-            },
-            "spectroscopy_data": {
-                "spectral_type": "G2V",
-                "radial_velocity": "15.2 km/s",
-                "metallicity": "[Fe/H] = -0.1"
-            },
-            "astrometry_data": {
-                "proper_motion_ra": "12.3 mas/yr",
-                "proper_motion_dec": "-8.7 mas/yr",
-                "parallax": "25.4 mas",
-                "distance": "39.4 pc"
-            },
-            "query_timestamp": time.time()
-        }
-        
-        # 更新状态
-        updated_state = state.copy()
-        updated_state["retrieval_config"] = retrieval_config
-        updated_state["retrieval_result"] = retrieval_result
-        updated_state["current_step"] = "real_time_data_retrieved"
-        
-        # 记录执行历史
-        execution_history = updated_state.get("execution_history", [])
-        execution_history.append({
-            "node": "real_time_retrieval_command_node",
-            "action": "data_retrieval",
-            "input": f"Object: {object_name}, Type: {object_type}",
-            "output": f"Retrieved {retrieval_result['total_records']} records from {len(retrieval_result['data_sources_queried'])} sources",
-            "timestamp": time.time(),
-        })
-        updated_state["execution_history"] = execution_history
-        
-        # 路由到数据库存储节点
-        return Command(
-            update=updated_state,
-            goto="database_storage"
-        )
-        
-    except Exception as e:
-        # 错误处理
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "real_time_retrieval_command_node",
-            "error": str(e),
-            "timestamp": time.time(),
-        }
-        error_state["retry_count"] = error_state.get("retry_count", 0) + 1
-        
-        return Command(
-            update=error_state,
-            goto="error_recovery"
-        )
+# real_time_retrieval_command_node已删除 - 在builder.py中未使用
 
 
-def database_storage_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
-    """
-    数据库存储节点 - Command语法实现
-    将检索结果存储到本地数据库
-    """
-    try:
-        retrieval_result = state.get("retrieval_result", {})
-        celestial_object = state.get("celestial_object", {})
-        classification_result = state.get("classification_result", {})
-        
-        if not retrieval_result:
-            # 没有检索结果可存储
-            error_state = state.copy()
-            error_state["error_info"] = {
-                "node": "database_storage_command_node",
-                "error": "No retrieval result to store",
-                "timestamp": time.time(),
-            }
-            return Command(
-                update=error_state,
-                goto="error_recovery"
-            )
-        
-        # 初始化数据库
-        db = LocalDatabase()
-        
-        # 准备天体对象数据
-        celestial_info = classification_result.get("classification_result", {})
-        object_name = celestial_info.get("object_name", "Unknown")
-        object_type = celestial_info.get("primary_category", "Unknown")
-        coordinates = celestial_info.get("coordinates", {})
-        magnitude = retrieval_result.get("photometry_data", {}).get("magnitude")
-        
-        # 创建天体对象
-        current_time = time.strftime('%Y-%m-%d %H:%M:%S')
-        celestial_obj = CelestialObject(
-            name=object_name,
-            object_type=object_type,
-            coordinates=coordinates if coordinates else {"ra": 0.0, "dec": 0.0},
-            magnitude=magnitude,
-            spectral_class=retrieval_result.get("spectroscopy_data", {}).get("spectral_type"),
-            distance=retrieval_result.get("astrometry_data", {}).get("distance"),
-            metadata={
-                "retrieval_data": retrieval_result,
-                "user_input": state.get("user_input", ""),
-                "session_id": state.get("session_id", "")
-            },
-            created_at=current_time,
-            updated_at=current_time
-        )
-        
-        # 保存天体对象到数据库
-        object_id = db.add_celestial_object(celestial_obj)
-        
-        # 创建分类结果
-        classification_obj = ClassificationResult(
-            object_id=object_id,
-            classification=celestial_info.get("detailed_classification", "Unknown"),
-            confidence=0.8 if celestial_info.get("confidence_level") == "中等" else 0.5,
-            method="rule_based",
-            details={
-                "primary_category": celestial_info.get("primary_category"),
-                "subcategory": celestial_info.get("subcategory"),
-                "key_features": celestial_info.get("key_features", []),
-                "explanation": classification_result.get("explanation", ""),
-                "suggestions": classification_result.get("suggestions", [])
-            }
-        )
-        
-        # 保存分类结果到数据库
-        classification_id = db.add_classification_result(classification_obj)
-        
-        # 准备存储数据
-        storage_data = {
-            "object_info": celestial_object,
-            "classification": classification_result,
-            "retrieval_data": retrieval_result,
-            "storage_timestamp": time.time(),
-            "data_version": "1.0"
-        }
-        
-        # 真实数据库存储结果
-        storage_result = {
-            "status": "success",
-            "database": "astro_insight.db",
-            "table": "celestial_objects",
-            "record_id": f"obj_{object_id}",
-            "classification_id": f"cls_{classification_id}",
-            "records_stored": 2,  # 天体对象 + 分类结果
-            "storage_size": "实际存储",
-            "storage_timestamp": time.time()
-        }
-        
-        # 更新状态
-        updated_state = state.copy()
-        updated_state["storage_data"] = storage_data
-        updated_state["storage_result"] = storage_result
-        updated_state["current_step"] = "data_stored"
-        updated_state["is_complete"] = True
-        
-        # 生成最终答案
-        celestial_info = classification_result.get("classification_result", {})
-        object_name = celestial_info.get("object_name", "Unknown")
-        object_type = celestial_info.get("primary_category", "Unknown")
-        coordinates = retrieval_result.get("coordinates", {})
-        magnitude = retrieval_result.get("photometry_data", {}).get("magnitude", "N/A")
-        
-        # 格式化坐标显示
-        coord_display = f"RA={coordinates.get('ra', 'N/A')}, DEC={coordinates.get('dec', 'N/A')}"
-        
-        final_answer = f"""天体分析完成！
-        
-天体名称: {object_name}
-分类结果: {object_type}
-坐标: {coord_display}
-星等: {magnitude}
-
-实时数据检索:
-- 数据源: {', '.join(retrieval_result.get('data_sources_queried', []))}
-- 检索记录: {retrieval_result.get('total_records', 0)} 条
-
-数据存储:
-- 数据库: {storage_result['database']}
-- 记录ID: {storage_result['record_id']}
-
-分析流程已完成，所有数据已安全存储到本地数据库。"""
-        
-        updated_state["final_answer"] = final_answer
-        
-        # 记录执行历史
-        execution_history = updated_state.get("execution_history", [])
-        execution_history.append({
-            "node": "database_storage_command_node",
-            "action": "data_storage",
-            "input": f"Storing data for {object_name}",
-            "output": f"Stored to {storage_result['database']}, ID: {storage_result['record_id']}",
-            "timestamp": time.time(),
-        })
-        updated_state["execution_history"] = execution_history
-        
-        # 完成流程
-        return Command(
-            update=updated_state,
-            goto="__end__"
-        )
-        
-    except Exception as e:
-        # 错误处理
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "database_storage_command_node",
-            "error": str(e),
-            "timestamp": time.time(),
-        }
-        error_state["retry_count"] = error_state.get("retry_count", 0) + 1
-        
-        return Command(
-            update=error_state,
-            goto="error_recovery"
-        )
+# 数据库存储功能已移除 - 分类节点不再需要数据存储
 
 
-# 为了兼容builder.py的导入，创建非Command版本的节点函数
-def identity_check_node(state: AstroAgentState) -> AstroAgentState:
-    """身份识别节点 - 兼容版本"""
-    command = identity_check_command_node(state)
-    return command.update
-
-
-def qa_agent_node(state: AstroAgentState) -> AstroAgentState:
-    """QA代理节点 - 兼容版本"""
-    command = qa_agent_command_node(state)
-    return command.update
-
-
-def task_selector_node(state: AstroAgentState) -> AstroAgentState:
-    """任务选择节点 - 兼容版本"""
-    command = task_selector_command_node(state)
-    return command.update
-
-
-def user_choice_handler_node(state: AstroAgentState) -> AstroAgentState:
-    """用户选择处理节点 - 兼容版本"""
-    command = user_choice_handler_command_node(state)
-    return command.update
-
-
-def classification_config_node(state: AstroAgentState) -> AstroAgentState:
-    """分类配置节点 - 兼容版本"""
-    command = classification_config_command_node(state)
-    return command.update
-
-
-def data_retrieval_node(state: AstroAgentState) -> AstroAgentState:
-    """数据检索节点 - 兼容版本"""
-    try:
-        user_input = state.get("user_input", "")
-        
-        # 模拟数据检索逻辑
-        retrieval_result = {
-            "status": "success",
-            "data": {
-                "query": user_input,
-                "results": [
-                    {"name": "示例天体1", "type": "恒星", "magnitude": 5.2},
-                    {"name": "示例天体2", "type": "星系", "magnitude": 12.1}
-                ],
-                "count": 2
-            },
-            "timestamp": time.time()
-        }
-        
-        updated_state = state.copy()
-        updated_state["retrieval_result"] = retrieval_result
-        updated_state["current_step"] = "data_retrieved"
-        updated_state["response"] = f"数据检索完成，找到{retrieval_result['data']['count']}个相关天体。"
-        updated_state["is_complete"] = True
-        
-        return updated_state
-        
-    except Exception as e:
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "data_retrieval_node",
-            "error": str(e),
-            "timestamp": time.time()
-        }
-        return error_state
-
-
-def literature_review_node(state: AstroAgentState) -> AstroAgentState:
-    """文献综述节点 - 兼容版本"""
-    try:
-        user_input = state.get("user_input", "")
-        
-        # 模拟文献综述逻辑
-        review_result = {
-            "status": "success",
-            "summary": f"关于'{user_input}'的文献综述已完成",
-            "papers_found": 15,
-            "key_findings": [
-                "最新研究表明该类天体具有独特的光谱特征",
-                "观测数据显示其形成机制与理论预期一致",
-                "多波段观测揭示了其内部结构特性"
-            ],
-            "timestamp": time.time()
-        }
-        
-        updated_state = state.copy()
-        updated_state["literature_review_result"] = review_result
-        updated_state["current_step"] = "literature_reviewed"
-        updated_state["response"] = f"文献综述完成，共分析了{review_result['papers_found']}篇相关论文。"
-        updated_state["is_complete"] = True
-        
-        return updated_state
-        
-    except Exception as e:
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "literature_review_node",
-            "error": str(e),
-            "timestamp": time.time()
-        }
-        return error_state
-
-
-def code_generator_node(state: AstroAgentState) -> AstroAgentState:
-    """代码生成节点 - 兼容版本"""
-    command = code_generator_command_node(state)
-    return command.update
-
-
-def code_executor_node(state: AstroAgentState) -> AstroAgentState:
-    """代码执行节点 - 兼容版本"""
-    command = code_executor_command_node(state)
-    return command.update
-
-
-def review_loop_node(state: AstroAgentState) -> AstroAgentState:
-    """审查循环节点 - 兼容版本"""
-    command = review_loop_command_node(state)
-    return command.update
-
-
-def error_recovery_node(state: AstroAgentState) -> AstroAgentState:
-    """错误恢复节点 - 兼容版本"""
-    try:
-        error_info = state.get("error_info", {})
-        retry_count = state.get("retry_count", 0)
-        
-        updated_state = state.copy()
-        updated_state["current_step"] = "error_recovered"
-        
-        if retry_count < 3:
-            updated_state["response"] = "遇到错误，正在尝试恢复..."
-            updated_state["retry_count"] = retry_count + 1
-        else:
-            updated_state["response"] = "抱歉，系统遇到了无法恢复的错误，请重新开始。"
-            updated_state["is_complete"] = True
-        
-        return updated_state
-        
-    except Exception as e:
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "error_recovery_node",
-            "error": str(e),
-            "timestamp": time.time()
-        }
-        error_state["response"] = "系统发生严重错误，请重新开始。"
-        error_state["is_complete"] = True
-        return error_state
+# 兼容版本的_node函数已删除 - 在builder.py中未使用
 
 
 @track_node_execution("qa_agent")
@@ -1006,22 +426,34 @@ def qa_agent_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
         user_type = state.get("user_type", "amateur")
 
         # 集成Tavily搜索获取最新信息
-        search_results = ""
+        search_context = ""
+        search_sources = []
         tavily_success = False
         try:
             from src.tools.tavily_search.tavily_search_api_wrapper import tavily_search
             search_query = f"天文 {user_input}"
-            search_results = tavily_search(search_query, max_results=3)
+            # 使用环境变量配置的max_results，不传参数让函数自动使用配置
+            search_results = tavily_search(search_query)
             if search_results:
-                # 让AI判断搜索结果质量，而不是硬编码过滤
-                search_info = "\n\n📚 最新相关信息：\n"
+                # 将搜索结果作为上下文提供给LLM，让LLM智能整合
+                search_context = "\n\n[最新网络信息参考] "
                 for i, result in enumerate(search_results[:2], 1):
-                    search_info += f"{i}. {result.get('title', '无标题')}\n{result.get('content', '无内容')[:200]}...\n\n"
-                search_results = search_info
+                    title = result.get('title', '无标题')
+                    content = result.get('content', '无内容')[:100]
+                    url = result.get('url', '')
+                    search_context += f"{title}: {content}... "
+                    
+                    # 收集来源信息用于最后的参考列表（保持原始语言）
+                    if url:
+                        domain = result.get('domain', 'unknown')
+                        # 保持原始标题，不进行翻译
+                        search_sources.append(f"{title} ({domain})")
+                
+                search_context += "请将这些信息自然地整合到回答中，不要直接引用。"
                 tavily_success = True
         except Exception as e:
             print(f"Tavily搜索失败: {e}")
-            search_results = ""
+            search_context = ""
 
         # 使用prompt模板获取QA提示词
         try:
@@ -1038,20 +470,24 @@ def qa_agent_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
             # 临时处理：如果LLM未初始化，提供默认回答
             response_content = f"感谢您的天文问题：{user_input}。这是一个很有趣的天文话题！由于当前LLM服务未配置，请稍后再试。"
         else:
+            # 将搜索上下文添加到用户输入中
+            enhanced_input = user_input + search_context
             chain = qa_prompt | llm
-            response = chain.invoke({"user_input": user_input, "user_type": user_type})
+            response = chain.invoke({"user_input": enhanced_input, "user_type": user_type})
             # 确保 response_content 是字符串
             if hasattr(response, 'content'):
                 response_content = str(response.content)
             else:
                 response_content = str(response)
 
-        # 组合回答和搜索结果
-        final_response = response_content + search_results
+        # 直接使用LLM整合后的回答，不再添加原始搜索结果
+        final_response = response_content
         
-        # 如果 Tavily 搜索成功并返回了结果，添加成功通知
-        if tavily_success and search_results:
-            final_response += "\n\n🔍 [Tavily 搜索已成功获取最新信息]"
+        # 如果 Tavily 搜索成功并返回了结果，添加参考来源
+        if tavily_success and search_sources:
+            final_response += "\n\n📚 参考来源：\n"
+            for i, source in enumerate(search_sources[:3], 1):
+                final_response += f"{i}. {source}\n"
 
         # 更新状态
         updated_state = state.copy()
@@ -1325,162 +761,10 @@ SIMBAD分类详情:
         )
 
 
-def data_retrieval_command_node(state: AstroAgentState) -> Command:
-    """数据检索节点 - 处理天文数据检索任务 (Command语法)"""
-    try:
-        user_input = state["user_input"]
-        task_type = state.get("task_type", "data_retrieval")
-
-        # 使用prompt模板获取数据检索提示词
-        retrieval_prompt_content = get_prompt(
-            "data_retrieval", user_input=user_input, task_type=task_type
-        )
-        retrieval_prompt = ChatPromptTemplate.from_template(retrieval_prompt_content)
-
-        # 生成检索配置
-        if llm is None:
-            # 临时处理：提供默认配置
-            retrieval_config = {
-                "data_source": "SDSS DR17",
-                "search_params": {"ra": "目标赤经", "dec": "目标赤纬", "radius": "搜索半径（角秒）"},
-                "output_fields": ["objid", "ra", "dec", "u", "g", "r", "i", "z"],
-                "retrieval_method": "cone_search",
-            }
-        else:
-            chain = retrieval_prompt | llm
-            response = chain.invoke({})
-            try:
-                retrieval_config = json.loads(response.content)
-            except:
-                # 解析失败时使用默认配置
-                retrieval_config = {
-                    "data_source": "SDSS DR17",
-                    "search_params": {"ra": "目标赤经", "dec": "目标赤纬", "radius": "搜索半径"},
-                    "output_fields": ["objid", "ra", "dec", "u", "g", "r", "i", "z"],
-                    "retrieval_method": "cone_search",
-                }
-
-        # 更新状态
-        updated_state = state.copy()
-        updated_state["task_config"] = retrieval_config
-        updated_state["current_step"] = "retrieval_configured"
-        updated_state["config_data"]["retrieval_config"] = retrieval_config
-
-        # 初始化execution_history如果不存在
-        if "execution_history" not in updated_state:
-            updated_state["execution_history"] = []
-
-        # 记录执行历史
-        updated_state["execution_history"].append(
-            {
-                "node": "data_retrieval_command_node",
-                "action": "configure_retrieval",
-                "input": user_input,
-                "output": retrieval_config,
-                "timestamp": time.time(),
-            }
-        )
-
-        # 路由到代码生成器
-        return Command(
-            update=updated_state,
-            goto="code_generator"
-        )
-
-    except Exception as e:
-        # 错误处理
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "data_retrieval_command_node",
-            "error": str(e),
-            "timestamp": time.time(),
-        }
-        error_state["retry_count"] = error_state.get("retry_count", 0) + 1
-        
-        return Command(
-             update=error_state,
-             goto="error_recovery"
-         )
+# 第一个data_retrieval_command_node定义已删除 - 使用第二个版本（带装饰器）
 
 
-def literature_review_command_node(state: AstroAgentState) -> Command:
-    """文献综述节点 - 处理天文文献检索和综述任务 (Command语法)"""
-    try:
-        user_input = state["user_input"]
-        task_type = state.get("task_type", "literature_review")
-
-        # 使用prompt模板获取文献综述提示词
-        literature_prompt_content = get_prompt(
-            "literature_review", user_input=user_input, task_type=task_type
-        )
-        literature_prompt = ChatPromptTemplate.from_template(literature_prompt_content)
-
-        # 生成文献配置
-        if llm is None:
-            # 临时处理：提供默认配置
-            literature_config = {
-                "keywords": ["astronomy", "astrophysics"],
-                "databases": ["ADS", "arXiv"],
-                "time_range": "2020-2024",
-                "literature_types": ["refereed", "preprint"],
-                "review_focus": "recent_developments",
-            }
-        else:
-            chain = literature_prompt | llm
-            response = chain.invoke({})
-            try:
-                literature_config = json.loads(response.content)
-            except:
-                # 解析失败时使用默认配置
-                literature_config = {
-                    "keywords": ["astronomy", "astrophysics"],
-                    "databases": ["ADS", "arXiv"],
-                    "time_range": "2020-2024",
-                    "literature_types": ["refereed", "preprint"],
-                    "review_focus": "recent_developments",
-                }
-
-        # 更新状态
-        updated_state = state.copy()
-        updated_state["task_config"] = literature_config
-        updated_state["current_step"] = "literature_configured"
-        updated_state["config_data"]["literature_config"] = literature_config
-
-        # 初始化execution_history如果不存在
-        if "execution_history" not in updated_state:
-            updated_state["execution_history"] = []
-
-        # 记录执行历史
-        updated_state["execution_history"].append(
-            {
-                "node": "literature_review_command_node",
-                "action": "configure_literature_review",
-                "input": user_input,
-                "output": literature_config,
-                "timestamp": time.time(),
-            }
-        )
-
-        # 路由到代码生成器
-        return Command(
-            update=updated_state,
-            goto="code_generator"
-        )
-
-    except Exception as e:
-        # 错误处理
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "literature_review_command_node",
-            "error": str(e),
-            "timestamp": time.time(),
-        }
-        error_state["retry_count"] = error_state.get("retry_count", 0) + 1
-        
-        return Command(
-            update=error_state,
-            goto="error_recovery"
-        )
+# literature_review_command_node已删除 - 在builder.py中未使用
 
 
 def error_recovery_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
@@ -1599,124 +883,7 @@ def error_recovery_command_node(state: AstroAgentState) -> Command[AstroAgentSta
          )
 
 
-# 代码生成Command节点
-def code_generator_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
-    """代码生成Command节点 - 生成天文数据处理代码"""
-    try:
-        user_input = state["user_input"]
-        task_type = state.get("task_type", "unknown")
-        
-        # 提取天体信息
-        celestial_info = extract_celestial_info_from_query(user_input)
-        
-        # 确定优化级别
-        optimization_level = "standard"
-        if "高性能" in user_input or "优化" in user_input:
-            optimization_level = "high"
-        elif "简单" in user_input or "基础" in user_input:
-            optimization_level = "basic"
-        
-        # 直接生成简单的代码，不使用复杂模板
-        generated_code = f'''# 天体{task_type}代码
-# 用户需求: {user_input}
-# 请安装必要的依赖: pip install astropy astroquery numpy matplotlib
-
-import numpy as np
-from astropy import coordinates as coords
-from astropy import units as u
-from astropy.io import fits
-import matplotlib.pyplot as plt
-
-def analyze_celestial_object():
-    """
-    分析天体数据的函数
-    根据用户需求: {user_input}
-    """
-    print(f"正在处理{task_type}任务...")
-    
-    # 示例代码框架
-    if "{task_type}" == "观测":
-        print("执行天体观测分析")
-    elif "{task_type}" == "计算":
-        print("执行天体参数计算")
-    elif "{task_type}" == "可视化":
-        print("生成天体数据可视化")
-    else:
-        print(f"执行{task_type}相关任务")
-    
-    return "任务完成"
-
-# 主程序
-if __name__ == "__main__":
-    analysis_result = analyze_celestial_object()
-    print(f"结果: {{analysis_result}}")'''
-        
-        # 验证代码语法
-        try:
-            compile(generated_code, "<string>", "exec")
-            syntax_valid = True
-        except SyntaxError as e:
-            syntax_valid = False
-            logging.warning(f"生成的代码存在语法错误: {e}")
-        
-        # 添加依赖处理
-        if "astroquery" in generated_code and "import astroquery" not in generated_code:
-            generated_code = "# 需要安装: pip install astroquery\n" + generated_code
-        if "astropy" in generated_code and "import astropy" not in generated_code:
-            generated_code = "# 需要安装: pip install astropy\n" + generated_code
-        
-        # 更新状态
-        updated_state = state.copy()
-        updated_state["generated_code"] = generated_code
-        updated_state["code_metadata"] = {
-            "task_type": task_type,
-            "optimization_level": optimization_level,
-            "syntax_valid": syntax_valid,
-            "celestial_info": celestial_info
-        }
-        updated_state["current_step"] = "code_generated"
-        
-        # 初始化execution_history如果不存在
-        if "execution_history" not in updated_state:
-            updated_state["execution_history"] = []
-        
-        # 记录执行历史
-        updated_state["execution_history"].append(
-            {
-                "node": "code_generator_command_node",
-                "action": "generate_code",
-                "input": {
-                    "user_input": user_input,
-                    "task_type": task_type,
-                    "celestial_info": celestial_info
-                },
-                "output": {
-                    "code_length": len(generated_code),
-                    "syntax_valid": syntax_valid,
-                    "optimization_level": optimization_level
-                },
-                "timestamp": time.time(),
-            }
-        )
-        
-        # 路由到代码执行节点
-        return Command(
-            update=updated_state,
-            goto="code_executor"
-        )
-        
-    except Exception as e:
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "code_generator_command_node",
-            "error": str(e),
-            "timestamp": time.time(),
-        }
-        error_state["retry_count"] = error_state.get("retry_count", 0) + 1
-        return Command(
-            update=error_state,
-            goto="error_recovery"
-        )
+# code_generator_command_node已删除 - 在builder.py中未使用
 
 
 @track_node_execution("task_selector")
@@ -1926,7 +1093,59 @@ def visualization_command_node(state: AstroAgentState) -> Command[AstroAgentStat
         user_input = state["user_input"]
         
         # 生成可视化代码
-        visualization_code = _generate_visualization_code(user_input)
+        visualization_code = f'''# 天文可视化代码
+# 用户需求: {user_input}
+# 请安装必要的依赖: pip install matplotlib numpy astropy
+
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy import coordinates as coords
+from astropy import units as u
+
+# 设置中文字体
+plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS']
+plt.rcParams['axes.unicode_minus'] = False
+
+# 创建图形
+fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+fig.suptitle('天文数据可视化', fontsize=16)
+
+# 示例数据
+ra = np.random.uniform(0, 360, 100)
+dec = np.random.uniform(-90, 90, 100)
+magnitude = np.random.uniform(10, 20, 100)
+
+# 散点图 - 坐标分布
+axes[0, 0].scatter(ra, dec, c=magnitude, cmap='viridis', alpha=0.7)
+axes[0, 0].set_xlabel('赤经 (度)')
+axes[0, 0].set_ylabel('赤纬 (度)')
+axes[0, 0].set_title('天体坐标分布')
+
+# 柱状图 - 星等分布
+axes[0, 1].hist(magnitude, bins=20, alpha=0.7, color='skyblue')
+axes[0, 1].set_xlabel('星等')
+axes[0, 1].set_ylabel('数量')
+axes[0, 1].set_title('星等分布')
+
+# 极坐标图 - 天空分布
+ax_polar = fig.add_subplot(2, 2, 3, projection='polar')
+ax_polar.scatter(np.radians(ra), dec, c=magnitude, cmap='plasma', alpha=0.7)
+ax_polar.set_title('天空分布图')
+
+# 线图 - 示例时间序列
+time = np.linspace(0, 10, 100)
+flux = np.sin(time) + 0.1 * np.random.randn(100)
+axes[1, 1].plot(time, flux, 'b-', alpha=0.7)
+axes[1, 1].set_xlabel('时间')
+axes[1, 1].set_ylabel('流量')
+axes[1, 1].set_title('光变曲线')
+
+plt.tight_layout()
+plt.savefig('astronomy_visualization.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+print("可视化图表已保存为 astronomy_visualization.png")
+'''
         
         # 更新状态
         updated_state = state.copy()
@@ -1983,169 +1202,7 @@ def visualization_command_node(state: AstroAgentState) -> Command[AstroAgentStat
         )
 
 
-def code_executor_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
-    """
-    代码执行节点 - Command语法实现
-    执行生成的代码并根据结果直接路由
-    """
-    try:
-        generated_code = state.get("generated_code", "")
-        retry_count = state.get("retry_count", 0)
-        
-        if not generated_code:
-            # 没有代码可执行，返回错误
-            error_state = state.copy()
-            error_state["error_info"] = {
-                "node": "code_executor_command_node",
-                "error": "No code to execute",
-                "timestamp": time.time(),
-            }
-            return Command(
-                update=error_state,
-                goto="error_recovery"
-            )
-
-        # 执行代码（这里简化处理，实际应该调用代码执行逻辑）
-        execution_result = {
-            "status": "success",  # 或 "error"
-            "output": "Code executed successfully",
-            "error_message": None,
-            "execution_time": time.time()
-        }
-        
-        # 更新状态
-        updated_state = state.copy()
-        updated_state["execution_result"] = execution_result
-        updated_state["current_step"] = "code_executed"
-        
-        # 记录执行历史
-        execution_history = updated_state.get("execution_history", [])
-        execution_history.append({
-            "node": "code_executor_command_node",
-            "action": "code_execution",
-            "input": generated_code[:100] + "..." if len(generated_code) > 100 else generated_code,
-            "output": execution_result["status"],
-            "timestamp": time.time(),
-        })
-        updated_state["execution_history"] = execution_history
-
-        # 根据执行结果路由
-        if execution_result["status"] == "success":
-            return Command(
-                update=updated_state,
-                goto="review_loop"
-            )
-        elif retry_count < 3:
-            # 执行失败但还可以重试
-            updated_state["retry_count"] = retry_count + 1
-            return Command(
-                update=updated_state,
-                goto="code_generator"
-            )
-        else:
-            # 重试次数超限，进入错误恢复
-            return Command(
-                update=updated_state,
-                goto="error_recovery"
-            )
-
-    except Exception as e:
-        # 错误处理
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "code_executor_command_node",
-            "error": str(e),
-            "timestamp": time.time(),
-        }
-        error_state["retry_count"] += 1
-        
-        return Command(
-            update=error_state,
-            goto="error_recovery"
-        )
+# code_executor_command_node已删除 - 在builder.py中未使用
 
 
-def review_loop_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
-    """
-    审查循环节点 - Command语法实现
-    审查执行结果并根据用户选择直接路由
-    """
-    try:
-        execution_result = state.get("execution_result", {})
-        user_choice = state.get("review_user_choice")
-        retry_count = state.get("retry_count", 0)
-        user_input = state.get("user_input", "")
-        
-        # 更新状态
-        updated_state = state.copy()
-        updated_state["current_step"] = "review_completed"
-        
-        # 生成响应内容
-        if "置信度" in user_input or "confidence" in user_input.lower():
-            updated_state["response"] = "分类结果的置信度为85%，基于天体特征匹配和光谱分析，可靠性较高。"
-        elif "依据" in user_input or "解释" in user_input or "分析" in user_input:
-            updated_state["response"] = "分类依据包括：光谱特征分析、亮度变化模式、颜色指数测量和形态学特征识别。"
-        elif "文件" in user_input or "生成" in user_input or "输出" in user_input:
-            updated_state["response"] = "已生成以下文件：classification_result.json（分类结果数据）、analysis_plot.png（分析图表）。"
-        elif "details" in user_input.lower() or "详细" in user_input or "信息" in user_input:
-            updated_state["response"] = "详细信息：执行状态为成功，处理时间3.2秒，内存使用42MB，结果准确度高。"
-        elif "重新" in user_input or "再次" in user_input or "分类" in user_input:
-            updated_state["response"] = "好的，我将重新进行分类分析，请稍等片刻。"
-        else:
-            updated_state["response"] = "审查完成，执行结果正常。如需其他操作，请告知。"
-        
-        # 记录执行历史
-        execution_history = updated_state.get("execution_history", [])
-        execution_history.append({
-            "node": "review_loop_command_node",
-            "action": "result_review",
-            "input": str(execution_result),
-            "output": user_choice or "auto_complete",
-            "timestamp": time.time(),
-        })
-        updated_state["execution_history"] = execution_history
-
-        # 根据用户选择路由
-        if user_choice == "reclassify" or "重新分类" in user_input:
-            return Command(
-                update=updated_state,
-                goto="classification_config"
-            )
-        elif user_choice == "regenerate_code":
-            return Command(
-                update=updated_state,
-                goto="code_generator"
-            )
-        elif user_choice == "retry":
-            return Command(
-                update=updated_state,
-                goto="code_executor"
-            )
-        elif user_choice == "complete" or user_choice is None:
-            # 完成流程
-            updated_state["is_complete"] = True
-            return Command(
-                update=updated_state,
-                goto="__end__"
-            )
-        else:
-            # 默认完成
-            updated_state["is_complete"] = True
-            return Command(
-                update=updated_state,
-                goto="__end__"
-            )
-
-    except Exception as e:
-        # 错误处理
-        error_state = state.copy()
-        error_state["error_info"] = {
-            "node": "review_loop_command_node",
-            "error": str(e),
-            "timestamp": time.time(),
-        }
-        
-        return Command(
-            update=error_state,
-            goto="error_recovery"
-        )
+# review_loop_command_node已删除 - 在builder.py中未使用

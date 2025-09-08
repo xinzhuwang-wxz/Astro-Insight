@@ -110,11 +110,22 @@ class EnvManager:
     
     def get_search_config(self) -> Dict[str, Any]:
         """获取搜索配置"""
+        # 解析允许的域名列表
+        allowed_domains = self.get('SEARCH_ALLOWED_DOMAINS', '')
+        allowed_domains_list = [d.strip() for d in allowed_domains.split(',') if d.strip()] if allowed_domains else []
+        
+        # 解析禁止的域名列表
+        blocked_domains = self.get('SEARCH_BLOCKED_DOMAINS', '')
+        blocked_domains_list = [d.strip() for d in blocked_domains.split(',') if d.strip()] if blocked_domains else []
+        
         return {
             'provider': self.get('SEARCH_PROVIDER', 'tavily'),
             'api_key': self.get('TAVILY_API_KEY'),
             'base_url': self.get('SEARCH_BASE_URL', 'https://api.tavily.com'),
             'max_results': int(self.get('SEARCH_MAX_RESULTS', '5')),
+            'allowed_domains': allowed_domains_list,
+            'blocked_domains': blocked_domains_list,
+            'safe_content': self.get('SEARCH_SAFE_CONTENT', 'true').lower() == 'true',
         }
     
     
