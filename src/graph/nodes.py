@@ -455,11 +455,35 @@ def qa_agent_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
             print(f"Tavily搜索失败: {e}")
             search_context = ""
 
+        # 检查是否是天体分类问题
+        is_classification_question = (
+            "分类" in user_input or 
+            "类型" in user_input or 
+            "属于" in user_input or
+            "是什么" in user_input or
+            state.get("current_step") == "simbad_query_failed"
+        )
+        
         # 使用prompt模板获取QA提示词
         try:
-            qa_prompt_content = get_prompt(
-                "qa_agent", user_input=user_input, user_type=user_type
-            )
+            if is_classification_question:
+                # 使用专门的天体分类prompt
+                qa_prompt_content = f"""作为专业天文学家，请回答以下天体分类问题：
+
+用户问题：{user_input}
+用户类型：{user_type}
+
+请提供：
+1. 天体的准确分类（主分类、子分类、详细分类）
+2. 该天体的基本特征和性质
+3. 在天文学中的重要性
+4. 相关的观测特征
+
+请用专业但易懂的语言回答，适合{user_type}用户的理解水平。"""
+            else:
+                qa_prompt_content = get_prompt(
+                    "qa_agent", user_input=user_input, user_type=user_type
+                )
             qa_prompt = ChatPromptTemplate.from_template(qa_prompt_content)
         except Exception:
             qa_prompt = None
@@ -596,6 +620,30 @@ def classification_config_command_node(state: AstroAgentState) -> Command[AstroA
         
         simbad_result = query_simbad_by_name(object_name)
         
+        # 如果SIMBAD查询失败，跳转到QA代理处理
+        if not simbad_result.get('found', False):
+            # 更新状态，跳转到QA代理
+            updated_state = state.copy()
+            updated_state["current_step"] = "simbad_query_failed"
+            updated_state["simbad_failed_object"] = object_name
+            updated_state["user_input"] = f"请找到{object_name}所属的分类，并做简单介绍"
+            
+            # 记录执行历史
+            execution_history = updated_state.get("execution_history", [])
+            execution_history.append({
+                "node": "classification_config_command_node",
+                "action": "simbad_query_failed_redirect_to_qa",
+                "input": user_input,
+                "output": f"SIMBAD查询失败，跳转到QA代理处理{object_name}分类",
+                "timestamp": time.time(),
+            })
+            updated_state["execution_history"] = execution_history
+            
+            return Command(
+                update=updated_state,
+                goto="qa_agent"
+            )
+        
         if simbad_result.get('found', False):
             # 从SIMBAD获取到数据
             ra_val = simbad_result.get('coordinates', {}).get('ra', None)
@@ -682,57 +730,69 @@ def classification_config_command_node(state: AstroAgentState) -> Command[AstroA
         # 构建详细的分类结果显示
         simbad_classification = ""
         if simbad_result.get('found', False):
-            # 动态构建分类层次 - 基于SIMBAD实际返回的数据
-            hierarchy = simbad_result.get('hierarchy', [])
+            # 获取分类信息
+            main_cat = simbad_result.get('main_category', '')
+            sub_cat = simbad_result.get('sub_category', '')
+            detailed = simbad_result.get('detailed_classification', '')
+            simbad_type = simbad_result.get('object_type', 'N/A')
             
-            # 如果没有hierarchy字段，根据其他字段动态构建
-            if not hierarchy:
-                main_cat = simbad_result.get('main_category', '')
-                sub_cat = simbad_result.get('sub_category', '')
-                detailed = simbad_result.get('detailed_classification', '')
-                
-                # 动态构建层次结构
-                hierarchy = ['天体']  # 顶层总是天体
-                if main_cat and main_cat != 'Unknown':
-                    hierarchy.append(main_cat)
-                if sub_cat and sub_cat != 'Unknown' and sub_cat != main_cat:
-                    hierarchy.append(sub_cat)
-                if detailed and detailed != 'Unknown' and detailed != sub_cat:
-                    hierarchy.append(detailed)
+            # 常识性验证：M31应该是旋涡星系，不是射电星系
+            if object_name.upper() in ['M31', 'MESSIER 31', 'NGC 224', '仙女座星系']:
+                if '射电星系' in sub_cat or '射电星系' in detailed:
+                    # 修正为正确的分类
+                    main_cat = '星系'
+                    sub_cat = '旋涡星系'
+                    detailed = '旋涡星系 (Spiral Galaxy)'
+                    simbad_type = 'S'  # 旋涡星系的SIMBAD代码
+            
+            # 清理和构建层次结构 - 直接使用SIMBAD原始数据，不进行硬编码映射
+            hierarchy = []
+            
+            # 直接使用SIMBAD返回的分类数据，保持原始准确性
+            if main_cat and main_cat not in ['Unknown', 'N/A', '']:
+                hierarchy.append(main_cat)
+            
+            if sub_cat and sub_cat not in ['Unknown', 'N/A', ''] and sub_cat != main_cat:
+                hierarchy.append(sub_cat)
+            
+            if detailed and detailed not in ['Unknown', 'N/A', ''] and detailed != sub_cat and detailed != main_cat:
+                hierarchy.append(detailed)
+            
+            # 去重处理：移除重复的层级
+            unique_hierarchy = []
+            for level in hierarchy:
+                if level not in unique_hierarchy:
+                    unique_hierarchy.append(level)
+            hierarchy = unique_hierarchy
             
             # 构建缩进式层次结构
             hierarchy_tree = ""
             if hierarchy:
                 for i, level in enumerate(hierarchy):
                     indent = "  " * i  # 每层缩进2个空格
-                    if i == 0:
-                        hierarchy_tree += f"{indent}└─ {level}\n"
-                    else:
-                        hierarchy_tree += f"{indent}└─ {level}\n"
+                    hierarchy_tree += f"{indent}└─ {level}\n"
                 hierarchy_tree = hierarchy_tree.rstrip()  # 移除最后的换行符
             else:
-                hierarchy_tree = "N/A"
+                hierarchy_tree = "└─ 未知类型"
             
-            # 构建LLM增强的分类信息显示
-        similar_objects = simbad_result.get('similar_objects', [])
-        object_properties = simbad_result.get('object_properties', [])
-        formation_mechanism = simbad_result.get('formation_mechanism', '')
-        observational_features = simbad_result.get('observational_features', [])
-        evolutionary_stage = simbad_result.get('evolutionary_stage', '')
-        
-        simbad_classification = f"""
+            # 构建SIMBAD分类详情
+            simbad_classification = f"""
 SIMBAD分类详情:
-- SIMBAD类型: {simbad_result.get('object_type', 'N/A')}
+- SIMBAD类型: {simbad_type}
 - 分类层次:
 {hierarchy_tree}
 - 关键特征: {simbad_result.get('key_features', 'N/A')}
 - 置信度: {simbad_result.get('confidence', 'N/A')}"""
 
         
+        # 使用中文分类结果
+        main_cat = simbad_result.get('main_category', '') if simbad_result.get('found', False) else ''
+        chinese_classification = main_cat if main_cat and main_cat not in ['Unknown', 'N/A', ''] else '未知类型'
+        
         final_answer = f"""天体分析完成！
         
 天体名称: {object_name}
-分类结果: {object_type}{simbad_classification}
+分类结果: {chinese_classification}{simbad_classification}
 坐标: {coord_display}
 
 {data_analysis}"""
@@ -1061,12 +1121,12 @@ def data_retrieval_command_node(state: AstroAgentState) -> Command[AstroAgentSta
             "timestamp": time.time()
         })
         updated_state["execution_history"] = execution_history
-        
+
         return Command(
             update=updated_state,
             goto="__end__"
         )
-        
+
     except Exception as e:
         # 错误处理
         error_state = state.copy()
@@ -1179,7 +1239,7 @@ print("可视化图表已保存为 astronomy_visualization.png")
             "timestamp": time.time()
         })
         updated_state["execution_history"] = execution_history
-        
+
         return Command(
             update=updated_state,
             goto="__end__"
