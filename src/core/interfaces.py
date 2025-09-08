@@ -22,10 +22,10 @@ class TaskType(Enum):
     """任务类型枚举"""
     QA = "qa"
     CLASSIFICATION = "classification"
-    DATA_RETRIEVAL = "data_retrieval"
+    DATA_ANALYSIS = "data_analysis"  # 整合数据检索、代码生成、执行
     LITERATURE_REVIEW = "literature_review"
-    CODE_GENERATION = "code_generation"
-    ANALYSIS = "analysis"
+    # 移除单独的 DATA_RETRIEVAL 和 CODE_GENERATION
+    # ANALYSIS = "analysis"  # 合并到 DATA_ANALYSIS
 
 
 class IUserService(ABC):

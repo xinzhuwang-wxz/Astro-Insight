@@ -237,7 +237,8 @@ class CompleteAstroSystem:
                 properties=celestial_info.get("properties", {})
             )
             
-            self.db.save_celestial_object(celestial_obj)
+            # TODO: 数据库存储功能（预留接口）
+            # self.db.save_celestial_object(celestial_obj)
             
             return {
                 "celestial_info": celestial_info,

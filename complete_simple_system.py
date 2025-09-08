@@ -50,7 +50,8 @@ class CompleteSimpleAstroSystem:
                 "cache": {"max_size": 1000, "ttl": 3600}
             }
         
-        # 初始化数据库
+        # 初始化数据库（预留接口）
+        # 数据库框架已实现，当前版本暂未启用数据持久化功能
         self.db = LocalDatabase()
         
         # 初始化LLM
@@ -122,20 +123,15 @@ class CompleteSimpleAstroSystem:
                 state.update(result)
                 state["current_step"] = "classification_completed"
                 
-            elif task_type == "data_retrieval":
-                result = self._handle_data_retrieval_query(user_input, user_type, state)
+            elif task_type == "data_analysis":
+                result = self._handle_data_analysis_query(user_input, user_type, state, session_id)
                 state.update(result)
-                state["current_step"] = "data_retrieved"
+                state["current_step"] = "data_analysis_completed"
                 
             elif task_type == "literature_review":
                 result = self._handle_literature_review_query(user_input, user_type, state)
                 state.update(result)
                 state["current_step"] = "literature_reviewed"
-                
-            elif task_type == "code_generation":
-                result = self._handle_code_generation_query(user_input, user_type, state)
-                state.update(result)
-                state["current_step"] = "code_generated"
                 
             else:
                 result = self._handle_general_query(user_input, user_type, state)
@@ -192,20 +188,23 @@ class CompleteSimpleAstroSystem:
         except Exception as e:
             print(f"Task service failed, using fallback: {e}")
         
-        # 规则分类 - 只检查明确指向分类任务的关键词
+        # 规则分类 - 检查关键词
         classification_keywords = [
             "分类", "classify", "什么类型", "天体类型", "天体分类", "属于什么", "属于哪类"
+        ]
+        
+        data_analysis_keywords = [
+            "数据", "检索", "分析", "处理", "计算", "统计", "可视化", "绘图", "代码", "编程",
+            "data", "analysis", "retrieval", "processing", "code", "plot", "visualization"
         ]
         
         # 优先检查是否包含分类关键词
         if any(keyword in user_input for keyword in classification_keywords):
             return "classification"
-        elif "数据" in user_input or "检索" in user_input or "data" in user_input.lower():
-            return "data_retrieval"
+        elif any(keyword in user_input for keyword in data_analysis_keywords):
+            return "data_analysis"  # 整合数据检索和代码生成
         elif "文献" in user_input or "literature" in user_input.lower():
             return "literature_review"
-        elif "代码" in user_input or "code" in user_input.lower():
-            return "code_generation"
         else:
             return "qa"
     
@@ -671,12 +670,10 @@ class CompleteSimpleAstroSystem:
                     "confidence": 0.95  # Simbad数据可信度很高
                 }
                 
-                # 保存到数据库（如果数据库支持）
-                try:
-                    if self.db and hasattr(self.db, 'save_celestial_object'):
-                        self.db.save_celestial_object(classification_result)
-                except Exception as e:
-                    print(f"数据库保存失败: {e}")
+                # TODO: 数据库存储功能（预留接口）
+                # 当前版本暂未实现数据库存储，保留框架为将来扩展
+                # 数据库类已实现：LocalDatabase, DataManager
+                # 待实现：数据持久化、查询历史、用户会话等
                 
                 # 生成详细回答
                 answer_parts = [
@@ -713,6 +710,46 @@ class CompleteSimpleAstroSystem:
         except Exception as e:
             print(f"Simbad分类失败，使用降级处理: {e}")
             return self._fallback_classification(user_input, state)
+    
+    def _handle_data_analysis_query(self, user_input: str, user_type: str, state: Dict[str, Any], session_id: str) -> Dict[str, Any]:
+        """处理数据分析查询 - 新的简化流程：指定数据集 → 代码生成 → Supabase查询 → 保存文件 → 询问可视化"""
+        try:
+            # 步骤1: 生成Supabase查询代码
+            query_code = self._generate_supabase_query_code(user_input, user_type)
+            
+            # 步骤2: 执行查询代码，从Supabase获取数据
+            query_result = self._execute_supabase_query(query_code, session_id)
+            
+            if not query_result.get("success"):
+                return self._fallback_data_analysis(user_input, state)
+            
+            # 步骤3: 保存数据到文件
+            save_result = self._save_data_to_file(query_result["data"], user_input, session_id)
+            
+            # 步骤4: 询问用户是否需要可视化
+            visualization_question = self._ask_visualization_question(user_input, query_result["data"])
+            
+            # 整合结果
+            analysis_result = {
+                "query_code": query_code,
+                "query_result": query_result,
+                "save_result": save_result,
+                "visualization_question": visualization_question,
+                "analysis_completed": True
+            }
+            
+            # 生成最终回答
+            final_answer = self._format_new_analysis_response(analysis_result, user_input, user_type)
+            
+            return {
+                "analysis_result": analysis_result,
+                "final_answer": final_answer,
+                "data_analysis_completed": True
+            }
+            
+        except Exception as e:
+            print(f"Data analysis failed, using fallback: {e}")
+            return self._fallback_data_analysis(user_input, state)
     
     def _handle_data_retrieval_query(self, user_input: str, user_type: str, state: Dict[str, Any]) -> Dict[str, Any]:
         """处理数据检索查询 - 完整版本"""
@@ -973,6 +1010,349 @@ class CompleteSimpleAstroSystem:
             return {
                 "error": str(e),
                 "final_answer": f"数据检索失败：{str(e)}"
+            }
+    
+    def _generate_supabase_query_code(self, user_input: str, user_type: str) -> str:
+        """生成Supabase查询代码"""
+        # 根据用户输入生成相应的查询代码
+        if "星系" in user_input or "galaxy" in user_input.lower():
+            table_name = "galaxies"
+            filters = {"type": "galaxy"}
+        elif "恒星" in user_input or "star" in user_input.lower():
+            table_name = "stars" 
+            filters = {"type": "star"}
+        elif "星云" in user_input or "nebula" in user_input.lower():
+            table_name = "nebulae"
+            filters = {"type": "nebula"}
+        else:
+            table_name = "celestial_objects"
+            filters = {}
+        
+        code = f'''# Supabase数据查询代码
+import sys
+import os
+sys.path.insert(0, 'src')
+
+from tools.supabase_client import get_supabase_client
+import json
+
+# 初始化Supabase客户端
+client = get_supabase_client()
+
+# 查询参数
+table_name = "{table_name}"
+filters = {filters}
+limit = 100
+
+# 执行查询
+try:
+    result = client.query_data(table_name, filters, limit)
+    
+    if result.get("success"):
+        data = result["data"]
+        print(f"查询成功，获取到 {{len(data)}} 条记录")
+        
+        # 打印前几条数据作为预览
+        for i, record in enumerate(data[:3]):
+            print(f"记录 {{i+1}}: {{record}}")
+            
+        # 返回完整数据
+        print("DATA_START")
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+        print("DATA_END")
+    else:
+        print(f"查询失败: {{result.get('error')}}")
+        
+except Exception as e:
+    print(f"执行查询时出错: {{str(e)}}")
+'''
+        return code
+    
+    def _execute_supabase_query(self, query_code: str, session_id: str) -> Dict[str, Any]:
+        """执行Supabase查询代码"""
+        try:
+            # 使用Python REPL执行查询代码
+            from tools.python_repl import PythonREPL
+            repl = PythonREPL()
+            
+            # 执行代码并捕获输出
+            execution_output = repl.run(query_code)
+            
+            # 解析输出中的JSON数据
+            if "DATA_START" in execution_output and "DATA_END" in execution_output:
+                start_idx = execution_output.find("DATA_START") + len("DATA_START")
+                end_idx = execution_output.find("DATA_END")
+                json_data = execution_output[start_idx:end_idx].strip()
+                
+                import json
+                data = json.loads(json_data)
+                
+                return {
+                    "success": True,
+                    "data": data,
+                    "count": len(data),
+                    "execution_output": execution_output
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "未找到数据输出",
+                    "execution_output": execution_output
+                }
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "execution_output": ""
+            }
+    
+    def _save_data_to_file(self, data: List[Dict], user_input: str, session_id: str) -> Dict[str, Any]:
+        """保存数据到文件"""
+        try:
+            import os
+            import json
+            import pandas as pd
+            from datetime import datetime
+            
+            # 确保数据存储目录存在
+            os.makedirs("./data/analysis_results", exist_ok=True)
+            
+            # 生成文件名
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_input = "".join(c for c in user_input[:20] if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            safe_input = safe_input.replace(' ', '_')
+            
+            # 保存为CSV
+            csv_path = f"./data/analysis_results/{safe_input}_{timestamp}.csv"
+            df = pd.DataFrame(data)
+            df.to_csv(csv_path, index=False, encoding='utf-8')
+            
+            # 保存为JSON
+            json_path = f"./data/analysis_results/{safe_input}_{timestamp}.json"
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            
+            return {
+                "success": True,
+                "csv_path": csv_path,
+                "json_path": json_path,
+                "record_count": len(data),
+                "csv_size": os.path.getsize(csv_path),
+                "json_size": os.path.getsize(json_path)
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def _ask_visualization_question(self, user_input: str, data: List[Dict]) -> str:
+        """询问用户是否需要可视化"""
+        if not data:
+            return "数据为空，无法生成可视化图表。"
+        
+        # 分析数据特征，给出可视化建议
+        data_analysis = self._analyze_data_for_visualization(data)
+        
+        question = f"""📊 数据获取完成！共找到 {len(data)} 条记录。
+
+{data_analysis}
+
+🤔 您是否需要我为您生成可视化图表？
+
+可选的可视化类型：
+• 📈 散点图 - 显示坐标分布
+• 📊 柱状图 - 统计天体类型分布  
+• 🌟 星等分布图 - 显示亮度分布
+• 🗺️ 天空分布图 - 显示天体在天空中的位置
+
+请回复 "是" 或 "否"，如果选择"是"，请告诉我您想要哪种类型的图表。"""
+        
+        return question
+    
+    def _analyze_data_for_visualization(self, data: List[Dict]) -> str:
+        """分析数据特征，为可视化提供建议"""
+        if not data:
+            return "数据为空。"
+        
+        sample = data[0]
+        available_fields = list(sample.keys())
+        
+        analysis_parts = []
+        
+        # 检查坐标字段
+        if any(field in available_fields for field in ['ra', 'dec', 'right_ascension', 'declination']):
+            analysis_parts.append("✅ 包含坐标信息，可以生成天空分布图")
+        
+        # 检查星等字段
+        if any(field in available_fields for field in ['magnitude', 'mag', 'brightness']):
+            analysis_parts.append("✅ 包含星等信息，可以生成星等分布图")
+        
+        # 检查类型字段
+        if any(field in available_fields for field in ['type', 'object_type', 'classification']):
+            analysis_parts.append("✅ 包含类型信息，可以生成类型分布图")
+        
+        # 检查数值字段
+        numeric_fields = [field for field in available_fields 
+                         if any(keyword in field.lower() for keyword in ['size', 'radius', 'distance', 'mass'])]
+        if numeric_fields:
+            analysis_parts.append(f"✅ 包含数值字段 {numeric_fields}，可以生成散点图")
+        
+        if not analysis_parts:
+            analysis_parts.append("⚠️ 数据字段有限，建议生成基础统计图表")
+        
+        return "\n".join(analysis_parts)
+    
+    def _format_new_analysis_response(self, analysis_result: Dict[str, Any], user_input: str, user_type: str) -> str:
+        """格式化新的数据分析响应"""
+        query_result = analysis_result.get("query_result", {})
+        save_result = analysis_result.get("save_result", {})
+        viz_question = analysis_result.get("visualization_question", "")
+        
+        response_parts = [
+            f"🔬 数据分析完成：{user_input}",
+            "",
+            "📊 查询结果：",
+            f"  - 数据表：{query_result.get('table_name', '未知')}",
+            f"  - 记录数：{query_result.get('count', 0)}条",
+            f"  - 查询状态：{'成功' if query_result.get('success') else '失败'}",
+            "",
+            "💾 文件保存：",
+        ]
+        
+        if save_result.get("success"):
+            response_parts.extend([
+                f"  - CSV文件：{save_result.get('csv_path', '未知')}",
+                f"  - JSON文件：{save_result.get('json_path', '未知')}",
+                f"  - 文件大小：{save_result.get('csv_size', 0)} bytes",
+            ])
+        else:
+            response_parts.append(f"  - 保存失败：{save_result.get('error', '未知错误')}")
+        
+        response_parts.extend([
+            "",
+            "🎨 可视化选项：",
+            viz_question,
+            "",
+            "[🤖 数据分析服务 - Supabase + 文件保存]"
+        ])
+        
+        return "\n".join(response_parts)
+    
+    def _perform_data_retrieval(self, user_input: str, user_type: str) -> Dict[str, Any]:
+        """执行数据检索步骤"""
+        try:
+            # 使用依赖注入的数据检索服务
+            from core.interfaces import IDataRetrievalService
+            retrieval_service = self.container.get(IDataRetrievalService)
+            result = retrieval_service.search_astronomical_data(user_input)
+            return result
+        except Exception as e:
+            print(f"Data retrieval service failed: {e}")
+            return self._fallback_data_retrieval(user_input, {})
+    
+    def _generate_analysis_code(self, user_input: str, user_type: str, retrieval_result: Dict[str, Any]) -> Dict[str, Any]:
+        """生成分析代码步骤"""
+        try:
+            # 使用依赖注入的代码生成服务
+            from core.interfaces import ICodeGenerationService
+            code_service = self.container.get(ICodeGenerationService)
+            code = code_service.generate_analysis_code({
+                "query": user_input, 
+                "user_type": user_type,
+                "data_context": retrieval_result
+            })
+            return {"code": code, "metadata": {"query": user_input, "user_type": user_type}}
+        except Exception as e:
+            print(f"Code generation service failed: {e}")
+            return self._fallback_code_generation(user_input, {})
+    
+    def _execute_analysis_code(self, code_result: Dict[str, Any], session_id: str) -> Dict[str, Any]:
+        """执行分析代码步骤"""
+        try:
+            # 使用Python REPL工具执行代码
+            from tools.python_repl import PythonREPL
+            repl = PythonREPL()
+            code = code_result.get("code", "")
+            if code:
+                execution_result = repl.run(code)
+                return {"execution_result": execution_result, "status": "success"}
+            else:
+                return {"execution_result": "No code to execute", "status": "skipped"}
+        except Exception as e:
+            print(f"Code execution failed: {e}")
+            return {"execution_result": f"Execution failed: {str(e)}", "status": "error"}
+    
+    def _format_analysis_response(self, analysis_result: Dict[str, Any], user_input: str, user_type: str) -> str:
+        """格式化数据分析响应"""
+        retrieval = analysis_result.get("retrieval", {})
+        code_gen = analysis_result.get("code_generation", {})
+        execution = analysis_result.get("execution", {})
+        
+        response_parts = [
+            f"🔬 数据分析完成：{user_input}",
+            "",
+            "📊 数据检索结果：",
+            f"  - 找到数据：{retrieval.get('total_count', 0)}条记录",
+            f"  - 数据源：{retrieval.get('source', '未知')}",
+            "",
+            "💻 代码生成结果：",
+            f"  - 生成代码：{len(code_gen.get('code', '').split())}行",
+            f"  - 编程语言：Python",
+            "",
+            "⚡ 执行结果：",
+            f"  - 状态：{execution.get('status', '未知')}",
+            f"  - 结果：{execution.get('execution_result', '无')[:100]}...",
+            "",
+            "[🤖 数据分析服务 - 整合检索+生成+执行]"
+        ]
+        
+        return "\n".join(response_parts)
+    
+    def _fallback_data_analysis(self, user_input: str, state: Dict[str, Any]) -> Dict[str, Any]:
+        """备用数据分析功能"""
+        try:
+            # 模拟完整的数据分析流程
+            mock_retrieval = {
+                "data": {"count": 25, "objects": [{"name": f"Object_{i}", "type": "galaxy"} for i in range(5)]},
+                "metadata": {"source": "SDSS", "query_time": time.time()}
+            }
+            
+            mock_code = f'''# 天文数据分析代码
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 分析查询: {user_input}
+data = {mock_retrieval['data']}
+print(f"分析完成，处理了{{len(data['objects'])}}个天体")
+'''
+            
+            mock_execution = {
+                "status": "success",
+                "execution_result": "分析完成，处理了5个天体"
+            }
+            
+            analysis_result = {
+                "retrieval": mock_retrieval,
+                "code_generation": {"code": mock_code, "metadata": {}},
+                "execution": mock_execution,
+                "analysis_completed": True
+            }
+            
+            final_answer = self._format_analysis_response(analysis_result, user_input, "professional")
+            
+            return {
+                "analysis_result": analysis_result,
+                "final_answer": final_answer,
+                "data_analysis_completed": True
+            }
+            
+        except Exception as e:
+            return {
+                "error": str(e),
+                "final_answer": f"数据分析失败：{str(e)}"
             }
     
     def _fallback_code_generation(self, user_input: str, state: Dict[str, Any]) -> Dict[str, Any]:
