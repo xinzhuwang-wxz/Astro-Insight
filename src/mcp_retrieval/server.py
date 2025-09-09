@@ -21,6 +21,10 @@ from mcp.types import (
 )
 
 # 导入查询工具
+import sys
+import os
+sys.path.append(os.path.dirname(__file__))
+
 from tools import (
     get_object_by_identifier,
     get_bibliographic_data,
