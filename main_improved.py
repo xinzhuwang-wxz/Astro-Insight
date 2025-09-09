@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-天文科研Agent系统主程序入口
-
-提供命令行交互界面，支持：
-- 交互式问答模式
-- 单次查询模式
-- 系统状态查看
-- 会话管理
+改进的天文科研Agent系统主程序入口
+基于改进的工作流，提供更稳定的命令行交互界面
 """
 
 import sys
@@ -17,20 +12,10 @@ import json
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-# 初始化环境变量管理器
-from src.config.env_manager import env_manager
-
-# 验证环境配置
-if not env_manager.validate_required_keys():
-    print("⚠️  警告: 部分必需的环境变量未设置，某些功能可能不可用")
-    env_manager.print_config_status()
-else:
-    print("✅ 环境变量配置正常")
-
 # 添加src目录到Python路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from src.workflow import AstroWorkflow, execute_astro_workflow
+from src.workflow_improved import ImprovedAstroWorkflow, execute_improved_astro_workflow
 from src.graph.types import AstroAgentState
 from src.utils.error_handler import handle_error, create_error_context, AstroError, ErrorCode, ErrorSeverity
 from src.utils.state_manager import format_state_output, validate_state
@@ -44,6 +29,7 @@ def print_banner():
 ║                  Astro Research Agent System                ║
 ║                                                              ║
 ║  支持爱好者问答和专业用户的数据检索、文献综述功能              ║
+║  (改进版 - 基于稳定的LangGraph架构)                          ║
 ╚══════════════════════════════════════════════════════════════╝
 """
     print(banner)
@@ -64,15 +50,13 @@ def print_help():
   什么是黑洞？
   我需要获取SDSS的星系数据
   请帮我查找关于引力波的最新文献
+  分类这个天体：M87
+  生成数据分析代码
 """
     print(help_text)
 
 
-# 使用新的状态管理器格式化输出
-# format_state_output函数已移至utils.state_manager模块
-
-
-def interactive_mode(workflow: AstroWorkflow):
+def interactive_mode(workflow: ImprovedAstroWorkflow):
     """交互式模式"""
     print("\n进入交互模式（输入 'help' 查看帮助，'quit' 退出）")
     session_counter = 1
@@ -146,7 +130,6 @@ def interactive_mode(workflow: AstroWorkflow):
                     
                     # 继续执行workflow处理用户选择
                     print(f"\n🤖 正在处理您的选择...")
-                    # 不传递choice_input作为新的user_input，让workflow内部处理用户选择
                     result = workflow.continue_workflow(session_id, choice_input)
                     print(format_state_output(result))
                 
@@ -170,7 +153,7 @@ def interactive_mode(workflow: AstroWorkflow):
             break
 
 
-def single_query_mode(workflow: AstroWorkflow, query: str, session_id: Optional[str] = None):
+def single_query_mode(workflow: ImprovedAstroWorkflow, query: str, session_id: Optional[str] = None):
     """单次查询模式"""
     if not session_id:
         session_id = f"single_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -196,7 +179,6 @@ def single_query_mode(workflow: AstroWorkflow, query: str, session_id: Optional[
             
             # 继续执行workflow处理用户选择
             print(f"\n🤖 正在处理您的选择...")
-            # 不传递choice_input作为新的user_input，让workflow内部处理用户选择
             result = workflow.continue_workflow(session_id, choice_input)
             print(format_state_output(result))
         
@@ -215,14 +197,14 @@ def single_query_mode(workflow: AstroWorkflow, query: str, session_id: Optional[
 def main():
     """主函数"""
     parser = argparse.ArgumentParser(
-        description='天文科研Agent系统',
+        description='改进的天文科研Agent系统',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
-  python main.py                           # 交互模式
-  python main.py -q "什么是黑洞？"           # 单次查询
-  python main.py --status                  # 查看系统状态
-  python main.py --config custom.yaml     # 使用自定义配置
+  python main_improved.py                           # 交互模式
+  python main_improved.py -q "什么是黑洞？"           # 单次查询
+  python main_improved.py --status                  # 查看系统状态
+  python main_improved.py --config custom.yaml     # 使用自定义配置
 """
     )
     
@@ -262,6 +244,12 @@ def main():
         help='显示详细日志信息'
     )
     
+    parser.add_argument(
+        '--no-memory',
+        action='store_true',
+        help='不使用内存存储会话状态'
+    )
+    
     args = parser.parse_args()
     
     # 配置日志级别
@@ -271,8 +259,8 @@ def main():
     
     try:
         # 初始化工作流
-        print("🚀 正在初始化天文科研Agent系统...")
-        workflow = AstroWorkflow(args.config)
+        print("🚀 正在初始化改进的天文科研Agent系统...")
+        workflow = ImprovedAstroWorkflow(args.config, use_memory=not args.no_memory)
         print("✅ 系统初始化完成")
         
         # 处理不同模式
@@ -302,8 +290,7 @@ def main():
                     'current_step': result.get('current_step'),
                     'is_complete': result.get('is_complete'),
                     'qa_response': result.get('qa_response'),
-                    'retrieval_config': result.get('retrieval_config'),
-                    'literature_config': result.get('literature_config'),
+                    'final_answer': result.get('final_answer'),
                     'error_info': result.get('error_info')
                 }
                 print(json.dumps(json_result, indent=2, ensure_ascii=False))

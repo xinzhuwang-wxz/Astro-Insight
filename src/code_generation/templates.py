@@ -94,35 +94,36 @@ def query_simbad_by_name(object_name: str) -> Dict[str, Any]:
         from astroquery.simbad import Simbad
         import numpy as np
         
-        print(f"正在查询SIMBAD数据库: {object_name}")
         
         # 配置SIMBAD查询，添加更多字段
         custom_simbad = Simbad()
-        custom_simbad.add_votable_fields('otype', 'ra', 'dec', 'plx', 'rv_value', 'flux(V)', 'flux(B)', 'flux(R)')
+        custom_simbad.add_votable_fields('otype', 'ra', 'dec', 'plx', 'flux(V)', 'flux(B)', 'flux(R)')
         
         # 执行查询
         query_result = custom_simbad.query_object(object_name)
         
         if query_result is not None and len(query_result) > 0:
             row = query_result[0]
-            print(f"SIMBAD查询成功，找到数据: {len(query_result)}条记录")
             
-            # 获取对象类型
-            object_type = row['OTYPE'].decode('utf-8') if hasattr(row['OTYPE'], 'decode') else str(row['OTYPE'])
-            print(f"天体类型: {object_type}")
+            # 获取对象类型 - 检查字段是否存在
+            object_type = "Unknown"
+            if 'OTYPE' in row.colnames:
+                object_type = row['OTYPE'].decode('utf-8') if hasattr(row['OTYPE'], 'decode') else str(row['OTYPE'])
+            elif 'otype' in row.colnames:
+                object_type = row['otype'].decode('utf-8') if hasattr(row['otype'], 'decode') else str(row['otype'])
             
             # 获取坐标 - 转换为度数
             ra_deg = None
             dec_deg = None
             
-            if row['RA'] is not None and not np.ma.is_masked(row['RA']):
+            if 'ra' in row.colnames and row['ra'] is not None and not np.ma.is_masked(row['ra']):
                 try:
                     from astropy.coordinates import SkyCoord
                     import astropy.units as u
                     
                     # 使用astropy解析坐标字符串
-                    ra_str = str(row['RA']).strip()
-                    dec_str = str(row['DEC']).strip()
+                    ra_str = str(row['ra']).strip()
+                    dec_str = str(row['dec']).strip() if 'dec' in row.colnames else None
                     
                     # 创建SkyCoord对象来解析坐标
                     coord = SkyCoord(ra=ra_str, dec=dec_str, unit=(u.hourangle, u.deg))
@@ -140,7 +141,6 @@ def query_simbad_by_name(object_name: str) -> Dict[str, Any]:
                         ra_deg = None
                         dec_deg = None
             
-            print(f"坐标: RA={ra_deg}, DEC={dec_deg}")
             
             # 获取星等信息
             magnitude = None
@@ -149,7 +149,6 @@ def query_simbad_by_name(object_name: str) -> Dict[str, Any]:
                     mag_value = row[mag_field]
                     if mag_value is not None and not np.ma.is_masked(mag_value):
                         magnitude = float(mag_value)
-                        print(f"星等 ({mag_field}): {magnitude}")
                         break
             
             # 分类天体类型
@@ -163,158 +162,137 @@ def query_simbad_by_name(object_name: str) -> Dict[str, Any]:
                 **classification
             })
             
-            print(f"查询结果: {result}")
         else:
-            print(f"SIMBAD中未找到天体: {object_name}")
-            
+            pass  # 未找到天体
     except ImportError:
         print("Warning: astroquery not available. Install with: pip install astroquery")
     except Exception as e:
-        print(f"SIMBAD查询错误: {e}")
         import traceback
         traceback.print_exc()
     
     return result
 
 
-def classify_simbad_type(object_type: str) -> Dict[str, str]:
-    """分类SIMBAD对象类型"""
-    type_mapping = {
-        # 恒星系统
-        'Star': {
-            'main_category': '系统',
-            'sub_category': '恒星系统',
-            'detailed_classification': '个体恒星',
-            'key_features': '单颗恒星',
-            'confidence': 'High'
-        },
-        'Binary': {
-            'main_category': '系统',
-            'sub_category': '恒星系统',
-            'detailed_classification': '双星系统',
-            'key_features': '两颗恒星相互绕转的系统',
-            'confidence': 'High'
-        },
-        'Multiple': {
-            'main_category': '系统',
-            'sub_category': '恒星系统',
-            'detailed_classification': '聚星系统',
-            'key_features': '多颗恒星组成的引力束缚系统',
-            'confidence': 'High'
-        },
-        'Cluster': {
-            'main_category': '系统',
-            'sub_category': '恒星系统',
-            'detailed_classification': '星团',
-            'key_features': '由数百到数十万颗恒星组成的集团',
-            'confidence': 'High'
-        },
-        
-        # 星系
-        'Galaxy': {
-            'main_category': '系统',
-            'sub_category': '多成分系统',
-            'detailed_classification': '星系',
-            'key_features': '由数十亿恒星组成的大型天体系统',
-            'confidence': 'High'
-        },
-        'RadioG': {
-            'main_category': '系统',
-            'sub_category': '多成分系统',
-            'detailed_classification': '射电星系',
-            'key_features': '发射强烈射电辐射的星系',
-            'confidence': 'High'
-        },
-        'GalaxyCluster': {
-            'main_category': '系统',
-            'sub_category': '多成分系统',
-            'detailed_classification': '星系团',
-            'key_features': '大型星系集团',
-            'confidence': 'High'
-        },
-        
-        # 致密天体
-        'WhiteDwarf': {
-            'main_category': '有成分金斯质量/密度',
-            'sub_category': '致密天体',
-            'detailed_classification': '白矮星',
-            'key_features': '恒星演化终点的致密残骸',
-            'confidence': 'High'
-        },
-        'NeutronStar': {
-            'main_category': '有成分金斯质量/密度',
-            'sub_category': '致密天体',
-            'detailed_classification': '中子星',
-            'key_features': '极致密的中子简并物质',
-            'confidence': 'High'
-        },
-        'BlackHole': {
-            'main_category': '有成分金斯质量/密度',
-            'sub_category': '致密天体',
-            'detailed_classification': '黑洞',
-            'key_features': '时空极度弯曲的区域',
-            'confidence': 'High'
-        },
-        
-        # 小天体
-        'Asteroid': {
-            'main_category': '有成分金斯质量/密度',
-            'sub_category': '未点燃过核聚变',
-            'detailed_classification': '小行星',
-            'key_features': '岩石或金属组成的小天体',
-            'confidence': 'High'
-        },
-        'Comet': {
-            'main_category': '有成分金斯质量/密度',
-            'sub_category': '未点燃过核聚变',
-            'detailed_classification': '彗星',
-            'key_features': '冰和尘埃组成的小天体',
-            'confidence': 'High'
-        },
-        
-        # 行星
-        'Planet': {
-            'main_category': '有成分金斯质量/密度',
-            'sub_category': '未点燃过核聚变',
-            'detailed_classification': '行星',
-            'key_features': '围绕恒星运行的大型天体',
-            'confidence': 'High'
-        },
-        'ExoPlanet': {
-            'main_category': '有成分金斯质量/密度',
-            'sub_category': '未点燃过核聚变',
-            'detailed_classification': '系外行星',
-            'key_features': '太阳系外的行星',
-            'confidence': 'High'
-        },
-        
-        # 星际介质
-        'Nebula': {
-            'main_category': '星际介质',
-            'sub_category': '弥散介质',
-            'detailed_classification': '星云',
-            'key_features': '星际气体和尘埃云',
-            'confidence': 'High'
-        },
-        'HII': {
-            'main_category': '星际介质',
-            'sub_category': '弥散介质',
-            'detailed_classification': 'HII区',
-            'key_features': '电离氢区域',
-            'confidence': 'High'
+def classify_simbad_type(object_type: str, object_name: str = None) -> Dict[str, str]:
+    """完全动态分类SIMBAD对象类型 - 完全基于LLM智能分析"""
+    
+    if not object_type or not object_type.strip():
+        return {
+            'hierarchy': ['天体', '未知类型'],
+            'main_category': '未知类型',
+            'sub_category': '未知类型',
+            'detailed_classification': '未知类型',
+            'key_features': '无法识别',
+            'confidence': 'Low',
+            'similar_objects': [],
+            'object_properties': [],
+            'formation_mechanism': '需要进一步研究',
+            'observational_features': [],
+            'evolutionary_stage': '需要进一步研究'
         }
-    }
     
-    # 默认分类
-    default_classification = {
-        'main_category': 'Unknown',
-        'sub_category': 'Unknown',
-        'detailed_classification': f'未知类型: {object_type}',
-        'key_features': '需要进一步分析',
-        'confidence': 'Low'
-    }
+    obj_type = object_type.strip()
     
-    return type_mapping.get(object_type, default_classification)
+    # 完全使用LLM进行动态分类
+    return _classify_with_llm(obj_type, object_name)
+
+
+def _classify_with_llm(obj_type: str, object_name: str = None) -> Dict[str, str]:
+    """使用LLM完全动态分类天体类型"""
+    
+    try:
+        from src.llms.llm import get_llm_by_type
+        
+        # 获取LLM实例
+        llm = get_llm_by_type("basic")
+        
+        # 构建LLM提示 - 完全动态分类
+        prompt = f"""作为专业天文学家，请分析以下SIMBAD天体类型代码并提供完整的分类信息：
+
+SIMBAD类型代码: {obj_type}
+天体名称: {object_name or '未知'}
+
+重要：请基于SIMBAD官方分类系统理解这些代码：
+- rG = 射电星系 (Radio Galaxy)
+- G = 星系 (Galaxy) 
+- S = 旋涡星系 (Spiral Galaxy)
+- E = 椭圆星系 (Elliptical Galaxy)
+- * = 恒星 (Star)
+- SB* = 分光双星 (Spectroscopic Binary)
+- V* = 变星 (Variable Star)
+- QSO = 类星体 (Quasar)
+- BLL = Blazar
+- WD = 白矮星 (White Dwarf)
+- NS = 中子星 (Neutron Star)
+- BH = 黑洞 (Black Hole)
+
+请提供以下完整信息（用JSON格式返回）：
+1. 分类层次结构（从大类到具体类型）
+2. 主要分类类别
+3. 子分类类别
+4. 详细分类
+5. 关键特征描述
+6. 置信度评估
+
+返回格式：
+{{
+    "hierarchy": ["大类", "中类", "小类", "具体类型"],
+    "main_category": "主要分类",
+    "sub_category": "子分类",
+    "detailed_classification": "详细分类",
+    "key_features": "关键特征描述",
+    "confidence": "High/Medium/Low"
+}}"""
+
+        # 调用LLM
+        from langchain_core.messages import HumanMessage
+        response = llm.invoke([HumanMessage(content=prompt)])
+        response_text = response.content
+        
+        # 尝试解析LLM响应
+        import json
+        try:
+            # 尝试提取JSON部分
+            import re
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            if json_match:
+                json_str = json_match.group()
+                enhanced_data = json.loads(json_str)
+            else:
+                raise ValueError("No JSON found in response")
+        except Exception as e:
+            # 如果JSON解析失败，使用默认值
+            enhanced_data = {
+                "hierarchy": ['天体', '未知类型', obj_type],
+                "main_category": "未知类型",
+                "sub_category": obj_type,
+                "detailed_classification": obj_type,
+                "key_features": "需要进一步分析",
+                "confidence": "Low",
+                "similar_objects": [],
+                "object_properties": [],
+                "formation_mechanism": "需要进一步研究",
+                "observational_features": [],
+                "evolutionary_stage": "需要进一步研究"
+            }
+        
+        return enhanced_data
+        
+    except Exception as e:
+        # 如果LLM调用失败，返回最基本的分类
+        return {
+            'hierarchy': ['天体', '未知类型', obj_type],
+            'main_category': '未知类型',
+            'sub_category': obj_type,
+            'detailed_classification': obj_type,
+            'key_features': '需要进一步分析',
+            'confidence': 'Low',
+            'similar_objects': [],
+            'object_properties': [],
+            'formation_mechanism': '需要进一步研究',
+            'observational_features': [],
+            'evolutionary_stage': '需要进一步研究'
+        }
 
 
 class AstronomyCodeTemplates:
