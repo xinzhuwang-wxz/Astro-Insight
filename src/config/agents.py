@@ -18,4 +18,5 @@ AGENT_LLM_MAP: dict[str, LLMType] = {
     "code_executor": "basic",
     "review_loop": "basic",
     "error_recovery": "basic",
+    "coder": "code",  # 新增：代码生成Agent使用代码专用LLM
 }
