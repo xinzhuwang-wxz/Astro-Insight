@@ -315,7 +315,7 @@ def identity_check_command_node(state: AstroAgentState) -> Command[AstroAgentSta
     判断用户类型（amateur/professional）并直接路由到下一个节点
     """
     try:
-        user_input = state["user_input"]
+        user_input = state["user_input"]  # 在下方prompt中，用户输入会被Python解释器立即替换为 user_input 变量的实际值
         
         # 输入验证
         if user_input is None or not isinstance(user_input, str):
@@ -328,22 +328,22 @@ def identity_check_command_node(state: AstroAgentState) -> Command[AstroAgentSta
 用户输入: {user_input}
 
 判断标准：
-- amateur（爱好者）：询问基础天文知识、概念解释、科普问题、学习性问题
-  例如："什么是黑洞？"、"恒星是如何形成的？"、"银河系有多大？"、"M87是什么？"
+- amateur（爱好者）：是否表明amateur(爱好者) 询问基础天文知识、概念解释、科普问题、学习性问题
+  例如："什么是黑洞呀？"、"恒星是如何形成的呀？"、"银河系有多大呀？"、"这颗星好亮呀"、"有趣的天文现象"
   
-- professional（专业用户）：需要专业分析、数据处理、天体分类、数据检索、图表绘制等
-  例如："M87属于什么类型？"、"分类这个天体：M87"、"获取SDSS星系数据"、"绘制天体位置图"、"分析M87的射电星系特征"
+- professional（专业用户）：是否表明professional(专业用户)，需要专业分析、数据处理、天体分类、数据检索、图表绘制等
+  例如："M87属于什么类型？"、"分类这个天体：M87"、"获取SDSS星系数据"、"绘制天体位置图"、"分析M87的射电星系特征"、"M31的参考文献"、"M31的特征"、"M31的性质"、"M31相关文献"、"离M31最近的星系有哪些"、"提供坐标判断星系"
 
 关键区别：
-- 问"是什么"、"如何形成"、"有多大" → amateur（科普问题）
-- 问"属于什么类型"、"分类"、"分析特征" → professional（专业分类/分析）
+- 优先级最高的是身份识别，如果明确爱好者（amateur），按照amateur（爱好者）处理。 问"有多大"、"这颗星好亮"、"有趣的天文现象" → amateur（科普问题）
+- 优先级最高的是身份识别，如果明确专业人士 (professional)，按照professional（专业用户）处理。问"属于什么类型"、"分类"、"分析特征" → professional（专业分类/分析）
 
 请仔细分析用户的语言风格、问题深度和专业需求，然后只返回：amateur 或 professional
 """
             
             from langchain_core.messages import HumanMessage
             messages = [HumanMessage(content=identity_prompt)]
-            response = llm.invoke(messages)
+            response = llm.invoke(messages)  # 按prompt要求，只返回amateur 或 professional
             user_type = response.content.strip().lower()
                 
             # 验证响应
@@ -460,8 +460,8 @@ def qa_agent_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
             "分类" in user_input or 
             "类型" in user_input or 
             "属于" in user_input or
-            "是什么" in user_input or
-            state.get("current_step") == "simbad_query_failed"
+            # "是什么" in user_input or  # “是什么” 适合检索任务
+            state.get("current_step") == "simbad_query_failed"  # 如果SIMBAD查询失败，跳转到QA代理处理
         )
         
         # 使用prompt模板获取QA提示词
@@ -483,7 +483,7 @@ def qa_agent_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
             else:
                 qa_prompt_content = get_prompt(
                     "qa_agent", user_input=user_input, user_type=user_type
-                )
+                )  # 如果用户输入不是分类问题，使用QA问答模板
             qa_prompt = ChatPromptTemplate.from_template(qa_prompt_content)
         except Exception:
             qa_prompt = None
@@ -524,7 +524,7 @@ def qa_agent_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
         # 添加助手消息
         if "messages" not in updated_state:
             updated_state["messages"] = []
-        updated_state["messages"].append({"role": "assistant", "content": final_response})
+        updated_state["messages"].append({"role": "assistant", "content": final_response})  # 作用是记录对话历史
 
         # 记录执行历史
         execution_history = updated_state.get("execution_history", [])
@@ -988,7 +988,7 @@ def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentStat
                 task_prompt = None
 
             # 使用大模型进行任务类型识别 - 完全依赖LLM判断
-            if llm:
+            if llm:  # {user_input} 会被Python解释器立即替换为 user_input 变量的实际值
                 task_prompt = f"""请仔细分析以下专业用户输入，识别具体的任务类型。
 
 用户输入: {user_input}
@@ -998,21 +998,21 @@ def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentStat
   例如："这是哪种天体？"、"M87属于什么类型？"、"分类这个天体"、"识别天体类型"
   
 - retrieval: 数据检索任务（获取和分析数据）
-  例如："分析M87的射电星系特征"、"获取星系数据"、"查询SDSS数据"、"检索天体信息"、"分析天体特征"、"研究天体性质"
+  例如："分析M87的射电星系特征"、"获取星系数据"、"查询SDSS数据"、"检索天体信息"、"分析天体特征"、"研究天体性质"、"M31是什么"、"M31的参考文献"、"M31的特征"、"M31的性质"、"M31相关文献"、"离M31最近的星系有哪些"、"提供坐标判断星系"
   
 - visualization: 绘制图表任务（生成图像和图表）
   例如："绘制天体位置图"、"生成光谱图"、"可视化数据"、"创建图表"、"制作图像"、"绘制分布图"
 
 关键区别：
 - classification: 问"是什么类型"、"属于什么分类"
-- retrieval: 问"分析特征"、"研究性质"、"获取数据"、"分析数据"
+- retrieval: 问"分析特征"、"研究性质"、"获取数据"、"提供坐标"、"星系的参考文献"、"提供特征"、"提供性质"、"提供最近的星系"、"分析星系坐标"
 - visualization: 问"绘制"、"生成图表"、"可视化"
 
 请仔细分析用户的具体需求，然后只返回：classification、retrieval 或 visualization
 """
                 
                 from langchain_core.messages import HumanMessage
-                messages = [HumanMessage(content=task_prompt)]
+                messages = [HumanMessage(content=task_prompt)] 
                 response = llm.invoke(messages)
                 task_type = response.content.strip().lower()
                 
@@ -1105,20 +1105,80 @@ def data_retrieval_command_node(state: AstroAgentState) -> Command[AstroAgentSta
     try:
         user_input = state["user_input"]
         
+        # 导入MCP检索客户端
+        try:
+            from ..mcp_retrieval.client import query_astro_data
+        except ImportError as e:
+            logger.error(f"无法导入MCP检索客户端: {e}")
+            # 如果导入失败，使用备用方案
+            updated_state = state.copy()
+            updated_state["current_step"] = "data_retrieval_completed"
+            updated_state["is_complete"] = True
+            updated_state["final_answer"] = f"数据检索功能暂时不可用。\n\n您的请求：{user_input}\n\n错误信息：{str(e)}\n\n请检查MCP检索模块是否正确安装。"
+            
+            # 记录执行历史
+            execution_history = updated_state.get("execution_history", [])
+            execution_history.append({
+                "node": "data_retrieval_command_node",
+                "action": "import_error",
+                "input": user_input,
+                "output": f"导入错误: {str(e)}",
+                "timestamp": time.time()
+            })
+            updated_state["execution_history"] = execution_history
+            
+            return Command(
+                update=updated_state,
+                goto="__end__"
+            )
+        
+        # 使用MCP检索客户端执行查询
+        logger.info(f"🔍 开始执行数据检索查询: {user_input}")
+        
+        try:
+            # 调用MCP检索客户端
+            retrieval_result = query_astro_data(user_input)
+            logger.info("✅ 数据检索查询完成")
+            
+            # 构建最终答案
+            final_answer = f"🔍 **数据检索结果**\n\n"
+            final_answer += f"**查询内容**: {user_input}\n\n"
+            final_answer += f"**检索结果**:\n{retrieval_result}\n\n"
+            final_answer += "---\n"
+            final_answer += "📊 **数据来源**: SIMBAD TAP服务\n"
+            final_answer += "🛠️ **检索工具**: MCP检索客户端\n"
+            final_answer += "✨ **功能特点**: 支持天体基础信息、文献查询、坐标搜索"
+            
+        except Exception as query_error:
+            logger.error(f"数据检索查询执行失败: {query_error}")
+            final_answer = f"❌ **数据检索失败**\n\n"
+            final_answer += f"**查询内容**: {user_input}\n\n"
+            final_answer += f"**错误信息**: {str(query_error)}\n\n"
+            final_answer += "请检查：\n"
+            final_answer += "- 网络连接是否正常\n"
+            final_answer += "- SIMBAD TAP服务是否可用\n"
+            final_answer += "- 查询格式是否正确\n\n"
+            final_answer += "💡 **建议**: 尝试使用天体名称（如M13、Vega）或坐标进行查询"
+        
         # 更新状态
         updated_state = state.copy()
         updated_state["current_step"] = "data_retrieval_completed"
         updated_state["is_complete"] = True
-        updated_state["final_answer"] = f"数据检索功能正在开发中。\n\n您的请求：{user_input}\n\n此功能将支持：\n- SDSS数据检索\n- SIMBAD数据库查询\n- 天文数据可视化\n- 数据导出功能"
+        updated_state["final_answer"] = final_answer
+        updated_state["task_type"] = "data_retrieval"
         
         # 记录执行历史
         execution_history = updated_state.get("execution_history", [])
         execution_history.append({
             "node": "data_retrieval_command_node",
-            "action": "data_retrieval_placeholder",
+            "action": "mcp_data_retrieval",
             "input": user_input,
-            "output": "数据检索功能开发中",
-            "timestamp": time.time()
+            "output": final_answer,
+            "timestamp": time.time(),
+            "details": {
+                "retrieval_success": "error" not in final_answer.lower(),
+                "result_length": len(final_answer)
+            }
         })
         updated_state["execution_history"] = execution_history
 
