@@ -6,17 +6,17 @@
 # - Set `verify_ssl` to `false` if your LLM server uses self-signed certificates
 # - A restart is required every time you change the `config.yaml` file.
 
-BASIC_MODEL:
-  base_url: http://localhost:11434/v1
-  model: "qwen2.5:7b"
-  api_key: "ollama"  # Ollama不需要真实API key，但需要提供值
-  max_retries: 3
-  verify_ssl: false  # 本地Ollama通常使用HTTP
+# BASIC_MODEL:
+#   base_url: http://localhost:11434/v1
+#   model: "qwen2.5:7b"
+#   api_key: "ollama"  # Ollama不需要真实API key，但需要提供值
+#   max_retries: 3
+#   verify_ssl: false  # 本地Ollama通常使用HTTP
 
-#BASIC_MODEL:
-#  base_url: https://ark.cn-beijing.volces.com/api/v3
-#  model: "doubao-1-5-thinking-pro-250415"
-#  api_key: xxx
+BASIC_MODEL:
+ base_url: https://ark.cn-beijing.volces.com/api/v3
+ model: "doubao-1-5-thinking-pro-250415"
+ api_key: xxx
 
 # 搜索API配置
 SEARCH_API:
