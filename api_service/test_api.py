@@ -78,17 +78,7 @@ class APITester:
             logger.info(f"   - 是否完成: {data['data'].get('is_complete', False)}")
             logger.info(f"   - 回答长度: {len(data['data'].get('answer', ''))} 字符")
             
-            # 显示token统计
-            if data.get('token_usage') and data['token_usage'].get('total_tokens', 0) > 0:
-                token_info = data['token_usage']
-                logger.info(f"   - Token统计:")
-                logger.info(f"     • 总Token: {token_info.get('total_tokens', 0):,}")
-                logger.info(f"     • 输入Token: {token_info.get('prompt_tokens', 0):,}")
-                logger.info(f"     • 输出Token: {token_info.get('completion_tokens', 0):,}")
-                logger.info(f"     • LLM调用: {token_info.get('llm_calls', 0)}次")
-                logger.info(f"     • 预估成本: {token_info.get('cost_formatted', 'N/A')}")
-            else:
-                logger.info(f"   - Token统计: 暂无数据")
+            # 注意：已移除token统计功能
             
             if data['data'].get('answer'):
                 answer_preview = data['data']['answer'][:100] + "..." if len(data['data']['answer']) > 100 else data['data']['answer']

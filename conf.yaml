@@ -16,7 +16,7 @@
 BASIC_MODEL:
  base_url: https://ark.cn-beijing.volces.com/api/v3
  model: "doubao-1-5-thinking-pro-250415"
- api_key: xxx
+ api_key: 44a9524a-ae48-441e-b728-883310dee33b
 
 # 搜索API配置
 SEARCH_API:

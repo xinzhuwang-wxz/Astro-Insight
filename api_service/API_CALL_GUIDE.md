@@ -103,9 +103,6 @@ async def query_endpoint(request: QueryRequest):
             user_context={"user_type": request.user_type}
         )
         
-        # 收集token使用统计
-        token_usage = collect_token_usage(result_state)
-        
         # 构建响应
         response_data = {
             "query": request.query,
@@ -127,8 +124,7 @@ async def query_endpoint(request: QueryRequest):
             message="查询处理成功",
             data=response_data,
             timestamp=datetime.now().isoformat(),
-            execution_time=execution_time,
-            token_usage=token_usage
+            execution_time=execution_time
         )
         
     except Exception as e:
@@ -138,8 +134,7 @@ async def query_endpoint(request: QueryRequest):
             message=f"查询处理失败: {str(e)}",
             data={"error": str(e)},
             timestamp=datetime.now().isoformat(),
-            execution_time=time.time() - start_time,
-            token_usage=None
+            execution_time=time.time() - start_time
         )
 ```
 
@@ -163,7 +158,6 @@ class QueryResponse(BaseModel):
     data: Dict[str, Any] = Field(..., description="响应数据")
     timestamp: str = Field(..., description="响应时间戳")
     execution_time: float = Field(..., description="执行时间（秒）")
-    token_usage: Optional[Dict[str, Any]] = Field(None, description="Token使用统计")
 ```
 
 ## 3. LangGraph工作流处理
@@ -345,62 +339,14 @@ return QueryResponse(
     message="查询处理成功",
     data=response_data,
     timestamp=datetime.now().isoformat(),
-    execution_time=execution_time,
-    token_usage=token_usage
+    execution_time=execution_time
 )
 ```
 
 ### 4.2 Token使用统计收集
 **文件**: `api_service/main.py`
 
-**Token统计函数** (第60-100行):
-```python
-def collect_token_usage(result_state: Dict[str, Any]) -> Dict[str, Any]:
-    """收集token使用统计"""
-    token_usage = {
-        "total_tokens": 0,
-        "prompt_tokens": 0,
-        "completion_tokens": 0,
-        "total_cost": 0.0,
-        "llm_calls": 0,
-        "details": []
-    }
-    
-    try:
-        execution_history = result_state.get("execution_history", [])
-        for entry in execution_history:
-            if isinstance(entry, dict) and "token_usage" in entry:
-                token_info = entry["token_usage"]
-                if isinstance(token_info, dict):
-                    token_usage["total_tokens"] += token_info.get("total_tokens", 0)
-                    token_usage["prompt_tokens"] += token_info.get("prompt_tokens", 0)
-                    token_usage["completion_tokens"] += token_info.get("completion_tokens", 0)
-                    token_usage["total_cost"] += token_info.get("cost", 0.0)
-                    token_usage["llm_calls"] += 1
-                    token_usage["details"].append({
-                        "node": entry.get("node", "unknown"),
-                        "action": entry.get("action", "unknown"),
-                        "tokens": token_info.get("total_tokens", 0),
-                        "cost": token_info.get("cost", 0.0),
-                        "model": token_info.get("model", "unknown")
-                    })
-        
-        if token_usage["total_tokens"] == 0:
-            global_token_usage = result_state.get("token_usage")
-            if global_token_usage and isinstance(global_token_usage, dict):
-                token_usage.update(global_token_usage)
-        
-        if token_usage["total_cost"] > 0:
-            token_usage["cost_formatted"] = f"${token_usage['total_cost']:.6f}"
-        else:
-            token_usage["cost_formatted"] = "N/A"
-            
-    except Exception as e:
-        logger.warning(f"收集token统计时出错: {e}")
-        token_usage["error"] = str(e)
-    
-    return token_usage
-```
+**注意**: 已移除 token_usage 相关功能，简化了响应格式。
 
 ## 5. 前端输出显示
 
@@ -484,8 +430,6 @@ LangGraph工作流 (execute_workflow)
 ### 6.2 输出流向
 ```
 LangGraph工作流返回结果
-    ↓
-collect_token_usage收集统计
     ↓
 QueryResponse模型构建
     ↓
