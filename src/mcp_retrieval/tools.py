@@ -19,9 +19,12 @@ def get_object_by_identifier(object_id: str) -> Dict[str, Any]:
     Returns:
         包含天体基础信息的字典
     """
+    # 清理输入参数
+    object_id = object_id.strip().replace('\n', '').replace('\r', '')
+    
     # 查询天体基础信息
     
-    # 构建ADQL查询语句 - 使用正确的语法
+    # 构建ADQL查询语句 - 使用简单的搜索方式
     query = f"""
     SELECT basic.oid,
            basic.RA,
@@ -42,7 +45,7 @@ def get_object_by_identifier(object_id: str) -> Dict[str, Any]:
         result = run_adql(query)
         
         if "error" in result:
-            logger.error(f"查询天体 {object_id} 失败: {result['error']}")
+            logger.error(f"Failed to query object {object_id}: {result['error']}")
             return {
                 "success": False,
                 "error": result["error"],
@@ -68,10 +71,13 @@ def get_object_by_identifier(object_id: str) -> Dict[str, Any]:
                     col_name = column_names[i] if i < len(column_names) else f"col_{i}"
                     record[col_name] = value
                 formatted_result["data"].append(record)
+            
+            # 更新总记录数
+            formatted_result["total_records"] = len(formatted_result["data"])
         else:
             # TAP服务没有返回数据
-            logger.warning(f"TAP服务未返回数据，查询对象: {object_id}")
-            logger.debug(f"TAP查询结果: {result}")
+            logger.warning(f"TAP service returned no data, query object: {object_id}")
+            logger.debug(f"TAP query result: {result}")
             formatted_result["data"] = []
             formatted_result["total_records"] = 0
         
@@ -79,10 +85,10 @@ def get_object_by_identifier(object_id: str) -> Dict[str, Any]:
         return formatted_result
         
     except Exception as e:
-        logger.error(f"查询天体 {object_id} 时发生异常: {str(e)}")
-        logger.debug(f"查询参数: object_id={object_id}")
+        logger.error(f"Exception occurred while querying object {object_id}: {str(e)}")
+        logger.debug(f"Query parameters: object_id={object_id}")
         import traceback
-        logger.debug(f"错误堆栈: {traceback.format_exc()}")
+        logger.debug(f"Error stack trace: {traceback.format_exc()}")
         return {
             "success": False,
             "error": "查询执行异常",
@@ -104,6 +110,9 @@ def get_bibliographic_data(object_id: str) -> Dict[str, Any]:
     Returns:
         包含参考文献信息的字典
     """
+    # 清理输入参数
+    object_id = object_id.strip().replace('\n', '').replace('\r', '')
+    
     # 查询天体参考文献
     
     # 构建ADQL查询语句 - 使用正确的语法，限制返回前5条
@@ -126,7 +135,7 @@ def get_bibliographic_data(object_id: str) -> Dict[str, Any]:
         result = run_adql(query)
         
         if "error" in result:
-            logger.error(f"查询天体 {object_id} 参考文献失败: {result['error']}")
+            logger.error(f"Failed to query bibliographic data for object {object_id}: {result['error']}")
             return {
                 "success": False,
                 "error": result["error"],
@@ -160,10 +169,10 @@ def get_bibliographic_data(object_id: str) -> Dict[str, Any]:
         return formatted_result
         
     except Exception as e:
-        logger.error(f"查询天体 {object_id} 参考文献时发生异常: {str(e)}")
-        logger.debug(f"查询参数: object_id={object_id}")
+        logger.error(f"Exception occurred while querying bibliographic data for object {object_id}: {str(e)}")
+        logger.debug(f"Query parameters: object_id={object_id}")
         import traceback
-        logger.debug(f"错误堆栈: {traceback.format_exc()}")
+        logger.debug(f"Error stack trace: {traceback.format_exc()}")
         return {
             "success": False,
             "error": "查询执行异常",
@@ -209,7 +218,7 @@ def search_objects_by_coordinates(ra: float, dec: float, radius: float = 0.1) ->
         result = run_adql(query)
         
         if "error" in result:
-            logger.error(f"坐标搜索失败: {result['error']}")
+            logger.error(f"Coordinate search failed: {result['error']}")
             return {
                 "success": False,
                 "error": result["error"],
@@ -241,10 +250,10 @@ def search_objects_by_coordinates(ra: float, dec: float, radius: float = 0.1) ->
         return formatted_result
         
     except Exception as e:
-        logger.error(f"坐标搜索时发生异常: {str(e)}")
-        logger.debug(f"搜索参数: ra={ra}, dec={dec}, radius={radius}")
+        logger.error(f"Exception occurred during coordinate search: {str(e)}")
+        logger.debug(f"Search parameters: ra={ra}, dec={dec}, radius={radius}")
         import traceback
-        logger.debug(f"错误堆栈: {traceback.format_exc()}")
+        logger.debug(f"Error stack trace: {traceback.format_exc()}")
         return {
             "success": False,
             "error": "搜索执行异常",
