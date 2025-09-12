@@ -1,14 +1,27 @@
-         # Astro-Insight 天文科研Agent系统
+# 🌟 Astro-Insight 天文科研Agent系统
 
-一个基于LangGraph的天文科研助手系统，支持爱好者问答和专业用户的数据检索、文献综述功能。
+一个基于 LangGraph 的天文科研助手与数据智能分析系统，支持爱好者问答与专业用户的数据检索、文献综述与代码生成。
 
-## 功能特性
+## 🚀 项目概述
+
+- 智能问答、天体分类、网络检索与文献综述
+- 代码生成 Agent：将自然语言转为可执行 Python，支持安全执行与可视化
+
+## ✨ 核心功能
 
 - 🤖 **智能问答**: 基于LLM的天文知识问答
 - 🔍 **天体分类**: 专业的SIMBAD数据库集成分类
 - 📊 **数据检索**: 支持多种天文数据源
 - 🌐 **网络搜索**: Tavily搜索API集成
 - 📝 **文献综述**: 自动文献检索和分析
+- 🧪 **代码生成 Agent（新增）**：
+  - 自然语言到代码与图表
+  - 智能数据集选择（内置 SDSS/Star Types）
+  - 安全沙箱执行与错误自动修复
+
+### 支持的数据集
+1. SDSS Galaxy Classification DR18（约10万条，43特征）
+2. Star Type Prediction Dataset（240条，6类）
 
 ## 快速开始
 
@@ -28,7 +41,8 @@ pip install -r requirements.txt
 **步骤3：配置API密钥**
 ```bash
 # 复制环境变量模板
-copy env.template .env
+copy env.template .env   # Windows
+# cp env.template .env   # Linux/Mac
 
 # 编辑 .env 文件，设置Tavily API密钥
 # TAVILY_API_KEY=tvly-dev-your_actual_api_key_here
@@ -51,13 +65,7 @@ python main.py
 - **Ollama** (本地LLM服务)
 - **Tavily API Key** (网络搜索)
 
-### 2. 安装依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. 配置API密钥
+### 配置API密钥
 
 #### ⚠️ 重要说明
 系统**完全依赖环境变量**管理API密钥，配置文件中的API密钥已被清空。您**必须**在 `.env` 文件中设置真实的API密钥，否则系统无法正常工作。
@@ -177,7 +185,7 @@ python main.py --status
 3. 创建API密钥
 4. 复制密钥到 `.env` 文件
 
-### 4. 启动Ollama服务
+### 启动Ollama服务
 
 ```bash
 # 安装并启动Ollama
@@ -187,7 +195,7 @@ ollama serve
 ollama pull qwen2.5:7b
 ```
 
-### 5. 运行系统
+### 运行系统
 
 ```bash
 # 交互模式
@@ -198,6 +206,27 @@ python main.py -q "分类这个天体：M87"
 
 # 查看系统状态
 python main.py --status
+```
+
+### 代码生成 Agent 快速上手
+```python
+from src.coder.workflow import CodeGenerationWorkflow
+
+workflow = CodeGenerationWorkflow()
+result = workflow.run("使用星类型数据集训练一个分类模型并可视化结果")
+```
+
+常用指令示例：
+```python
+# 数据探索
+workflow.run("展示6_class_csv数据集的前5行和基本统计信息")
+workflow.run("分析星类型数据集中各类别的分布情况")
+
+# 可视化
+workflow.run("绘制温度-光度散点图，按星类型着色")
+
+# 机器学习
+workflow.run("使用星类型数据训练随机森林分类器并评估性能")
 ```
 
 ## 环境变量管理
@@ -288,18 +317,28 @@ Tavily 搜索错误: Unauthorized: missing or invalid API key.
 ```
 🔭 请输入您的身份与问题: 分析M87的射电星系特征
 ```
-
 ## 项目结构
 
 ```
 Astro-Insight/
 ├── src/
+│   ├── coder/                 # 代码生成 Agent 核心
+│   │   ├── agent.py
+│   │   ├── workflow.py
+│   │   ├── dataset_selector.py
+│   │   ├── executor.py
+│   │   ├── prompts.py
+│   │   └── types.py
 │   ├── config/         # 配置管理
 │   │   └── env_manager.py  # 环境变量管理器
 │   ├── graph/          # LangGraph工作流
 │   ├── llms/           # LLM客户端
 │   ├── tools/          # 工具模块
-│   └── code_generation/ # 代码生成
+│   └── ...
+├── dataset/
+│   ├── dataset/
+│   └── full_description/
+├── output/
 ├── conf.yaml           # 主配置文件
 ├── env.template        # 环境变量模板
 ├── main.py            # 主程序入口
@@ -406,6 +445,12 @@ LLM_BASE_URL=http://localhost:11434/v1
 - [ ] 配置文件 `conf.yaml` 中的API密钥已清空
 - [ ] 系统启动时显示"环境变量配置正常"
 - [ ] Tavily搜索功能正常工作
+
+## 故障排除
+
+- Tavily 未授权：检查 `.env` 中 `TAVILY_API_KEY`
+- .env 未加载：确保根目录存在 `.env`
+- API 密钥格式错误：确认提供商要求的格式
 
 ## 许可证
 

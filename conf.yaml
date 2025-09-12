@@ -6,6 +6,7 @@
 # - Set `verify_ssl` to `false` if your LLM server uses self-signed certificates
 # - A restart is required every time you change the `config.yaml` file.
 
+# 基础模型配置 - 推荐使用本地Ollama（免费且隐私安全）
 BASIC_MODEL:
    base_url: http://localhost:11434/v1
    model: "qwen2.5:7b"
@@ -13,10 +14,29 @@ BASIC_MODEL:
    max_retries: 3
    verify_ssl: false  # 本地Ollama通常使用HTTP
 
+# 云端豆包模型配置（需要API密钥，可选）
 #BASIC_MODEL:
 #  base_url: https://ark.cn-beijing.volces.com/api/v3
-#  model: "doubao-1-5-thinking-pro-250415"
-#  api_key: xxx
+#  model: "doubao-1-5-pro-32k-250115"
+#  api_key: "your_doubao_api_key_here"  # 请在.env文件中设置
+#  max_retries: 3
+#  verify_ssl: true  # 云服务通常需要SSL验证
+
+# 代码生成专用模型配置
+CODE_MODEL:
+  base_url: http://localhost:11434/v1
+  model: "qwen2.5:7b"  # 可以使用相同模型，或者专门的代码模型
+  api_key: "ollama"
+  max_retries: 3
+  verify_ssl: false
+
+# 多模态解释模型配置
+Explain_MODEL:
+  base_url: http://localhost:11434/v1
+  model: "qwen2.5:7b"  # 本地模型，支持基础多模态功能
+  api_key: "ollama"
+  max_retries: 3
+  verify_ssl: false
 
 # 搜索API配置
 SEARCH_API:

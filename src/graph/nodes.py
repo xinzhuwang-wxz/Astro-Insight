@@ -513,9 +513,9 @@ def qa_agent_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
             for i, source in enumerate(search_sources[:3], 1):
                 final_response += f"{i}. {source}\n"
 
-        # 更新状态 - 避免并发更新冲突
+        # 更新状态
         updated_state = state.copy()
-        # 只更新final_answer，不更新qa_response避免冲突
+        updated_state["qa_response"] = final_response
         updated_state["final_answer"] = final_response
         updated_state["current_step"] = "qa_completed"
         updated_state["is_complete"] = True
@@ -549,6 +549,7 @@ def qa_agent_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
         error_message = f"抱歉，处理您的问题时遇到了技术问题：{str(e)}。请稍后再试。"
         error_state = state.copy()
         error_state["final_answer"] = error_message
+        error_state["qa_response"] = error_message
         error_state["error_info"] = {
             "node": "qa_agent_command_node",
             "error": str(e),
@@ -858,6 +859,7 @@ def error_recovery_command_node(state: AstroAgentState) -> Command[AstroAgentSta
 
             # 只更新必要的字段，避免复制整个状态
             updated_state = {
+                "qa_response": fallback_response,
                 "final_answer": fallback_response,
                 "current_step": "error_handled",
                 "is_complete": True
@@ -913,6 +915,7 @@ def error_recovery_command_node(state: AstroAgentState) -> Command[AstroAgentSta
 
 如果问题持续存在，请联系技术支持。"""
 
+                updated_state["qa_response"] = fallback_response
                 updated_state["final_answer"] = fallback_response
                 updated_state["current_step"] = "error_handled"
                 updated_state["is_complete"] = True
@@ -932,6 +935,7 @@ def error_recovery_command_node(state: AstroAgentState) -> Command[AstroAgentSta
         # 错误恢复节点本身出错，直接标记完成
         error_state = state.copy()
         error_state["final_answer"] = "系统遇到严重错误，请稍后重试。"
+        error_state["qa_response"] = "系统遇到严重错误，请稍后重试。"
         error_state["current_step"] = "fatal_error"
         error_state["is_complete"] = True
         return Command(

@@ -34,8 +34,7 @@ class CodeExecutor:
         # 禁止的操作
         self.forbidden_patterns = [
             'import subprocess', 'import os.system', '__import__',
-            'exec(', 'eval(', 'open(', 'file(', 'input(',
-            'raw_input(', 'execfile(', 'compile('
+            'exec(', 'eval(', 'input(', 'raw_input(', 'execfile(', 'compile('
         ]
     
     def execute_code(self, code: str, context: Optional[Dict[str, Any]] = None) -> CodeExecutionResult:
@@ -57,13 +56,16 @@ class CodeExecutor:
                 generated_files=[]
             )
         
+        # 执行前记录已有文件
+        before_files = set(self._list_output_files())
+        
         # 执行代码
         try:
             result = self._execute_in_sandbox(processed_code, context or {})
             execution_time = time.time() - start_time
             
-            # 检查生成的文件
-            generated_files = self._find_generated_files()
+            # 执行后获取新生成的文件（差集 + 时间窗口）
+            generated_files = self._find_new_generated_files(before_files, start_time)
             
             return CodeExecutionResult(
                 status=ExecutionStatus.SUCCESS if result["success"] else ExecutionStatus.ERROR,
@@ -113,6 +115,11 @@ class CodeExecutor:
             if pattern in code:
                 return {"safe": False, "reason": f"禁止的操作: {pattern}"}
         
+        # 检查文件操作的安全性
+        file_safety = self._check_file_operations(code)
+        if not file_safety["safe"]:
+            return file_safety
+        
         # 检查导入的模块
         import ast
         try:
@@ -132,6 +139,69 @@ class CodeExecutor:
             return {"safe": False, "reason": f"语法错误: {str(e)}"}
         
         return {"safe": True, "reason": ""}
+    
+    def _check_file_operations(self, code: str) -> Dict[str, Any]:
+        """检查文件操作的安全性"""
+        import ast
+        import os
+        
+        try:
+            tree = ast.parse(code)
+            for node in ast.walk(tree):
+                # 检查open()函数调用
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == 'open':
+                    if node.args:
+                        # 获取文件路径
+                        if isinstance(node.args[0], ast.Str):  # Python 3.7及以下
+                            file_path = node.args[0].s
+                        elif isinstance(node.args[0], ast.Constant):  # Python 3.8+
+                            file_path = node.args[0].value
+                        else:
+                            continue
+                        
+                        # 检查路径是否安全
+                        if not self._is_safe_file_path(file_path):
+                            return {"safe": False, "reason": f"不安全的文件路径: {file_path}"}
+                
+                # 检查os.path操作
+                elif isinstance(node, ast.Call):
+                    if (isinstance(node.func, ast.Attribute) and 
+                        isinstance(node.func.value, ast.Attribute) and
+                        isinstance(node.func.value.value, ast.Name) and
+                        node.func.value.value.id == 'os' and
+                        node.func.value.attr == 'path'):
+                        # 检查os.path操作是否安全
+                        if not self._is_safe_os_path_operation(node):
+                            return {"safe": False, "reason": "不安全的os.path操作"}
+        
+        except Exception as e:
+            return {"safe": False, "reason": f"文件操作检查失败: {str(e)}"}
+        
+        return {"safe": True, "reason": ""}
+    
+    def _is_safe_file_path(self, file_path: str) -> bool:
+        """检查文件路径是否安全"""
+        import os
+        
+        # 允许相对路径（在当前工作目录或output目录下）
+        if not os.path.isabs(file_path):
+            return True
+        
+        # 允许绝对路径指向output目录
+        try:
+            abs_path = os.path.abspath(file_path)
+            output_abs_path = os.path.abspath(str(self.output_dir))
+            return abs_path.startswith(output_abs_path)
+        except:
+            return False
+    
+    def _is_safe_os_path_operation(self, node) -> bool:
+        """检查os.path操作是否安全"""
+        # 允许常用的os.path操作，但禁止访问系统敏感路径
+        safe_operations = ['join', 'exists', 'isdir', 'isfile', 'basename', 'dirname', 'splitext']
+        if node.func.attr in safe_operations:
+            return True
+        return False
     
     def _execute_in_sandbox(self, code: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """在沙箱环境中执行代码"""
@@ -167,6 +237,7 @@ class CodeExecutor:
                     'hasattr': hasattr,
                     'getattr': getattr,
                     'setattr': setattr,
+                    'open': open,             # 添加 open 函数
                     '__import__': __import__,  # 允许import
                     'locals': locals,         # 添加 locals
                     'globals': globals,       # 添加 globals
@@ -200,8 +271,31 @@ class CodeExecutor:
                 "error": error_details
             }
     
+    def _list_output_files(self) -> List[str]:
+        """列出输出目录下的所有文件（绝对或相对路径字符串）"""
+        files = []
+        if self.output_dir.exists():
+            for file_path in self.output_dir.iterdir():
+                if file_path.is_file():
+                    files.append(str(file_path))
+        return files
+    
+    def _find_new_generated_files(self, before_files: set, start_time: float) -> List[str]:
+        """根据执行前后差集与修改时间，返回本次新生成的图片文件"""
+        after_files = set(self._list_output_files())
+        allowed_ext = {'.png', '.jpg', '.jpeg', '.svg'}
+        
+        # 差集新增
+        diff_new = {f for f in (after_files - before_files) if Path(f).suffix.lower() in allowed_ext}
+        
+        # 执行开始后被修改/写入的文件（覆盖写入的场景）
+        time_new = {f for f in after_files if Path(f).suffix.lower() in allowed_ext and Path(f).stat().st_mtime >= start_time}
+        
+        combined = sorted(diff_new.union(time_new), key=lambda p: Path(p).stat().st_mtime)
+        return list(combined)
+    
     def _find_generated_files(self) -> List[str]:
-        """查找执行过程中生成的文件"""
+        """查找执行过程中生成的文件（保留旧方法以兼容，但不再用于主流程）"""
         generated_files = []
         
         if self.output_dir.exists():

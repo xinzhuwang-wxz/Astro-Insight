@@ -95,41 +95,8 @@ class MCPClientWrapper:
     async def _initialize_connection(self):
         """初始化MCP连接"""
         try:
-            # 简化的MCP初始化 - 直接发送初始化请求
-            init_request = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "initialize",
-                "params": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {
-                        "tools": {}
-                    },
-                    "clientInfo": {
-                        "name": "astrophysics-client",
-                        "version": "1.0.0"
-                    }
-                }
-            }
-            
-            # 发送初始化请求
-            init_json = json.dumps(init_request) + "\n"
-            self.server_process.stdin.write(init_json)
-            self.server_process.stdin.flush()
-            
-            # 等待响应
-            await asyncio.sleep(1)
-            
-            # 发送initialized通知
-            initialized_notification = {
-                "jsonrpc": "2.0",
-                "method": "notifications/initialized"
-            }
-            
-            initialized_json = json.dumps(initialized_notification) + "\n"
-            self.server_process.stdin.write(initialized_json)
-            self.server_process.stdin.flush()
-            
+            # 简化初始化 - 不发送初始化请求，直接标记为已初始化
+            # 因为我们的MCP服务器不需要复杂的初始化流程
             self.initialized = True
             logger.info("MCP连接初始化完成")
             
@@ -319,13 +286,15 @@ class AstrophysicsQueryClient:
         
         @tool
         def get_object_by_identifier_mcp(object_id: str) -> str:
-            """根据天体标识符获取基础信息 (MCP版本)"""
+            """根据天体标识符获取基础信息 (直接调用版本)"""
             try:
-                # 使用MCP客户端调用工具
-                result = asyncio.run(self.mcp_client.call_tool("get_object_by_identifier", {"object_id": object_id}))
-                return result
+                # 直接调用tools.py中的函数，绕过MCP通信
+                from .tools import get_object_by_identifier
+                result = get_object_by_identifier(object_id)
+                return str(result)
             except Exception as e:
-                return f"查询失败: {str(e)}"
+                logger.error(f"天体查询失败: {str(e)}")
+                return f"天体查询失败: {str(e)}"
         
         @tool
         def get_bibliographic_data_mcp(object_id: str) -> str:
@@ -341,15 +310,14 @@ class AstrophysicsQueryClient:
         
         @tool
         def search_objects_by_coordinates_mcp(ra: float, dec: float, radius: float = 0.1) -> str:
-            """根据坐标搜索附近的天体 (MCP版本)"""
+            """根据坐标搜索附近的天体 (直接调用版本)"""
             try:
-                result = asyncio.run(self.mcp_client.call_tool("search_objects_by_coordinates", {
-                    "ra": ra, 
-                    "dec": dec, 
-                    "radius": radius
-                }))
-                return result
+                # 直接调用tools.py中的函数，绕过MCP通信
+                from .tools import search_objects_by_coordinates
+                result = search_objects_by_coordinates(ra, dec, radius)
+                return str(result)
             except Exception as e:
+                logger.error(f"坐标搜索失败: {str(e)}")
                 return f"坐标搜索失败: {str(e)}"
         
         self.mcp_tools = [
@@ -546,9 +514,10 @@ class AstrophysicsQueryClient:
             
             # 记录工具选择信息
             if hasattr(response, 'tool_calls') and response.tool_calls:
-                logger.info(f"选择工具: {[tool_call['name'] for tool_call in response.tool_calls]}")
+                logger.info(f"🔧 选择工具: {[tool_call['name'] for tool_call in response.tool_calls]}")
             else:
-                logger.info("直接返回文本响应")
+                logger.info("📝 直接返回文本响应")
+                logger.info(f"📝 响应内容: {response.content[:200]}...")
             
             state["messages"] = messages
             
