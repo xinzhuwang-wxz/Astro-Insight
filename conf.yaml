@@ -29,6 +29,13 @@ CODE_MODEL:
   verify_ssl: true
 
 
+Explain_MODEL:
+  base_url: https://ark.cn-beijing.volces.com/api/v3
+  model: "doubao-seed-1-6-vision-250815"
+  api_key: "7cb5b91d-ec51-40e0-b75c-1bba04931000"
+  max_retries: 3
+  verify_ssl: true
+
 # 搜索API配置
 SEARCH_API:
   provider: tavily
