@@ -63,16 +63,16 @@ class AstroAgentState(TypedDict):
     config_data: Dict[str, Any]
 
     # 执行状态
-    current_step: str
+    current_step: Annotated[str, "当前执行步骤"]
     next_step: Optional[str]
-    is_complete: bool
+    is_complete: Annotated[bool, "是否完成"]
     awaiting_user_choice: bool
     user_choice: Optional[str]
 
     # 结果数据
-    qa_response: Optional[str]
+    qa_response: Annotated[Optional[str], "QA响应内容"]
     response: Optional[str]  # 对话响应字段
-    final_answer: Optional[str]
+    final_answer: Annotated[Optional[str], "最终回答内容"]
     generated_code: Optional[str]
     execution_result: Optional[Dict[str, Any]]
 

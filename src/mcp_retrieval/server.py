@@ -21,6 +21,10 @@ from mcp.types import (
 )
 
 # 导入查询工具
+import sys
+import os
+sys.path.append(os.path.dirname(__file__))
+
 from tools import (
     get_object_by_identifier,
     get_bibliographic_data,
@@ -103,12 +107,17 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
     处理工具调用
     """
     try:
+        logger.info(f"工具调用: {name}, 参数: {arguments}")
+        
         if name == "get_object_by_identifier":
             object_id = arguments.get("object_id")
             if not object_id:
+                logger.error("缺少object_id参数")
                 return [TextContent(type="text", text="错误: 缺少object_id参数")]
             
+            logger.info(f"查询天体: {object_id}")
             result = get_object_by_identifier(object_id)
+            logger.info(f"查询结果: {result}")
             return [TextContent(type="text", text=str(result))]
             
         elif name == "get_bibliographic_data":
@@ -142,6 +151,7 @@ async def handle_list_resources() -> list[Resource]:
     """
     列出可用的资源
     """
+    logger.info("列出资源被调用")
     return [
         Resource(
             uri="simbad://info",
@@ -156,8 +166,12 @@ async def handle_read_resource(uri: str) -> str:
     """
     读取资源内容
     """
-    if uri == "simbad://info":
-        return """
+    # 将 AnyUrl 对象转换为字符串
+    uri_str = str(uri)
+    logger.info(f"读取资源被调用: {uri_str}")
+    
+    if uri_str == "simbad://info":
+        content = """
 Simbad TAP服务信息
 ==================
 
@@ -171,8 +185,11 @@ Simbad TAP服务信息
 
 数据来源: CDS (Centre de Données astronomiques de Strasbourg)
 """
+        logger.info(f"成功读取资源: {uri_str}")
+        return content
     else:
-        raise ValueError(f"未知资源: {uri}")
+        logger.error(f"未知资源: {uri_str}")
+        raise ValueError(f"未知资源: {uri_str}")
 
 async def main():
     """

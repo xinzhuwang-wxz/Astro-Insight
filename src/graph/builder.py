@@ -11,6 +11,7 @@ from .nodes import (
     classification_config_command_node,
     data_retrieval_command_node,
     visualization_command_node,
+    multimark_command_node,
     error_recovery_command_node
 )
 from .types import AstroAgentState
@@ -40,6 +41,8 @@ def route_after_task_selection(state: AstroAgentState) -> str:
         return "data_retrieval"
     elif task_type == "visualization":
         return "visualization"
+    elif task_type == "multimark":
+        return "multimark"
     else:
         return "error_recovery"
 
@@ -72,6 +75,7 @@ def _build_astro_graph():
     graph.add_node("classification_config", classification_config_command_node)
     graph.add_node("data_retrieval", data_retrieval_command_node)
     graph.add_node("visualization", visualization_command_node)
+    graph.add_node("multimark", multimark_command_node)
     graph.add_node("error_recovery", error_recovery_command_node)
     
     # 设置入口点
@@ -91,7 +95,7 @@ def _build_astro_graph():
     # QA节点直接结束（不再询问是否进入专业模式）
     graph.add_edge("qa_agent", END)
     
-    # 任务选择后的路由：分类/检索/可视化
+    # 任务选择后的路由：分类/检索/可视化/多模态标注
     graph.add_conditional_edges(
         "task_selector",
         route_after_task_selection,
@@ -99,6 +103,7 @@ def _build_astro_graph():
             "classification_config": "classification_config",
             "data_retrieval": "data_retrieval",
             "visualization": "visualization",
+            "multimark": "multimark",
             "error_recovery": "error_recovery"
         }
     )
@@ -107,6 +112,7 @@ def _build_astro_graph():
     graph.add_edge("classification_config", END)
     graph.add_edge("data_retrieval", END)
     graph.add_edge("visualization", END)
+    graph.add_edge("multimark", END)
     
     # 错误恢复后直接结束
     graph.add_conditional_edges(

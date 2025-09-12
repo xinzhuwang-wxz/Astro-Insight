@@ -1003,12 +1003,16 @@ def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentStat
 - visualization: 绘制图表任务（生成图像和图表）
   例如："绘制天体位置图"、"生成光谱图"、"可视化数据"、"创建图表"、"制作图像"、"绘制分布图"
 
+- multimark: 图片识别标注任务（分析天文图像并标注）
+  例如："标注这张星系图像"、"识别图像中的天体"、"分析天文照片"、"标记图像中的对象"、"图像标注"、"图片分析"、"识别照片中的天体"
+
 关键区别：
 - classification: 问"是什么类型"、"属于什么分类"
 - retrieval: 问"分析特征"、"研究性质"、"获取数据"、"提供坐标"、"星系的参考文献"、"提供特征"、"提供性质"、"提供最近的星系"、"分析星系坐标"
 - visualization: 问"绘制"、"生成图表"、"可视化"
+- multimark: 问"标注"、"识别图像"、"分析照片"、"标记图像"
 
-请仔细分析用户的具体需求，然后只返回：classification、retrieval 或 visualization
+请仔细分析用户的具体需求，然后只返回：classification、retrieval、visualization 或 multimark
 """
                 
                 from langchain_core.messages import HumanMessage
@@ -1017,7 +1021,7 @@ def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentStat
                 task_type = response.content.strip().lower()
                 
                 # 验证响应
-                if task_type not in ["classification", "retrieval", "visualization"]:
+                if task_type not in ["classification", "retrieval", "visualization", "multimark"]:
                     # 如果LLM返回的不是预期格式，尝试从文本中提取
                     if "classification" in task_type or "分类" in task_type:
                         task_type = "classification"
@@ -1025,6 +1029,8 @@ def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentStat
                         task_type = "retrieval"
                     elif "visualization" in task_type or "可视化" in task_type or "图表" in task_type:
                         task_type = "visualization"
+                    elif "multimark" in task_type or "标注" in task_type or "图像" in task_type or "图片" in task_type:
+                        task_type = "multimark"
                     else:
                         task_type = "classification"  # 默认为分类任务
             else:
@@ -1057,7 +1063,7 @@ def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentStat
         })
         updated_state["execution_history"] = execution_history
         
-        # 路由逻辑 - 简化为三个主要任务类型
+        # 路由逻辑 - 四个主要任务类型
         if task_type == "classification":
             return Command(
                 update=updated_state,
@@ -1072,6 +1078,11 @@ def task_selector_command_node(state: AstroAgentState) -> Command[AstroAgentStat
             return Command(
                 update=updated_state,
                 goto="visualization"
+            )
+        elif task_type == "multimark":
+            return Command(
+                update=updated_state,
+                goto="multimark"
             )
         else:
             # 默认分类任务
@@ -1322,7 +1333,63 @@ print("可视化图表已保存为 astronomy_visualization.png")
         )
 
 
-# code_executor_command_node已删除 - 在builder.py中未使用
+@track_node_execution("multimark")
+def multimark_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
+    """
+    多模态标注节点 - 处理天文图像的AI识别和标注任务
+    """
+    try:
+        user_input = state["user_input"]
+        
+        # TODO: 实现multimark功能
+        # 当前为fallback实现，等待后续开发
+        fallback_message = f"""多模态标注功能开发中...
+
+您的请求：{user_input}
+
+功能说明：
+       暂定中.....
+
+当前状态：功能开发中，敬请期待！
+
+如需使用，请联系开发团队获取最新版本。"""
+        
+        # 更新状态
+        updated_state = state.copy()
+        updated_state["current_step"] = "multimark_completed"
+        updated_state["is_complete"] = True
+        updated_state["final_answer"] = fallback_message
+        
+        # 记录执行历史
+        execution_history = updated_state.get("execution_history", [])
+        execution_history.append({
+            "node": "multimark_command_node",
+            "action": "multimark_fallback",
+            "input": user_input,
+            "output": "多模态标注功能开发中",
+            "timestamp": time.time()
+        })
+        updated_state["execution_history"] = execution_history
+
+        return Command(
+            update=updated_state,
+            goto="__end__"
+        )
+
+    except Exception as e:
+        # 错误处理
+        error_state = state.copy()
+        error_state["error_info"] = {
+            "node": "multimark_command_node",
+            "error": str(e),
+            "timestamp": time.time(),
+        }
+        error_state["final_answer"] = f"多模态标注过程中发生错误：{str(e)}"
+        error_state["is_complete"] = True
+        
+        return Command(
+            update=error_state,
+            goto="__end__"
+        )
 
 
-# review_loop_command_node已删除 - 在builder.py中未使用

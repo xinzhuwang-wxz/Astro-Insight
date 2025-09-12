@@ -9,6 +9,8 @@ LangGraph Client for Astrophysics TAP Query System
 import asyncio
 import logging
 import os
+import subprocess
+import json
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 
@@ -46,12 +48,164 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from src.config.loader import load_yaml_config
 
+
+# 加载环境变量
+load_dotenv()
+
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+class MCPClientWrapper:
+    """MCP客户端包装器，使用子进程管理MCP服务器"""
+    
+    def __init__(self):
+        self.server_process = None
+        self.tools = []
+        self.initialized = False
+        
+    async def start_server(self):
+        """启动MCP服务器子进程"""
+        try:
+            # 使用模块方式启动MCP服务器
+            self.server_process = subprocess.Popen(
+                ['python', '-m', 'src.mcp_retrieval.server'],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            )
+            logger.info("MCP服务器子进程已启动")
+            
+            # 等待服务器启动
+            await asyncio.sleep(3)
+            
+            # 初始化MCP连接
+            await self._initialize_connection()
+            
+            return True
+        except Exception as e:
+            logger.error(f"启动MCP服务器失败: {str(e)}")
+            return False
+    
+    async def _initialize_connection(self):
+        """初始化MCP连接"""
+        try:
+            # 简化的MCP初始化 - 直接发送初始化请求
+            init_request = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {
+                        "tools": {}
+                    },
+                    "clientInfo": {
+                        "name": "astrophysics-client",
+                        "version": "1.0.0"
+                    }
+                }
+            }
+            
+            # 发送初始化请求
+            init_json = json.dumps(init_request) + "\n"
+            self.server_process.stdin.write(init_json)
+            self.server_process.stdin.flush()
+            
+            # 等待响应
+            await asyncio.sleep(1)
+            
+            # 发送initialized通知
+            initialized_notification = {
+                "jsonrpc": "2.0",
+                "method": "notifications/initialized"
+            }
+            
+            initialized_json = json.dumps(initialized_notification) + "\n"
+            self.server_process.stdin.write(initialized_json)
+            self.server_process.stdin.flush()
+            
+            self.initialized = True
+            logger.info("MCP连接初始化完成")
+            
+        except Exception as e:
+            logger.error(f"MCP连接初始化失败: {str(e)}")
+            raise
+    
+    async def stop_server(self):
+        """停止MCP服务器子进程"""
+        if self.server_process:
+            try:
+                self.server_process.terminate()
+                self.server_process.wait(timeout=5)
+                logger.info("MCP服务器子进程已停止")
+            except subprocess.TimeoutExpired:
+                self.server_process.kill()
+                logger.warning("强制终止MCP服务器子进程")
+            except Exception as e:
+                logger.error(f"停止MCP服务器时出错: {str(e)}")
+    
+    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> str:
+        """调用MCP工具"""
+        try:
+            if not self.initialized:
+                return "MCP连接未初始化"
+            
+            # 构建MCP请求
+            request = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": tool_name,
+                    "arguments": arguments
+                }
+            }
+            
+            # 发送请求到MCP服务器
+            if self.server_process and self.server_process.stdin:
+                request_json = json.dumps(request) + "\n"
+                self.server_process.stdin.write(request_json)
+                self.server_process.stdin.flush()
+                
+                # 读取响应
+                response_line = self.server_process.stdout.readline()
+                if response_line:
+                    response = json.loads(response_line.strip())
+                    if "result" in response:
+                        # 处理MCP工具调用结果
+                        result = response["result"]
+                        if "content" in result and isinstance(result["content"], list) and len(result["content"]) > 0:
+                            # 提取文本内容
+                            content = result["content"][0].get("text", str(result))
+                            return content
+                        else:
+                            return str(result)
+                    elif "error" in response:
+                        return f"错误: {response['error']}"
+                    else:
+                        return "未知响应格式"
+                else:
+                    return "无响应"
+            else:
+                return "MCP服务器未运行"
+                
+        except Exception as e:
+            logger.error(f"调用MCP工具失败: {str(e)}")
+            return f"工具调用失败: {str(e)}"
+    
+    def get_available_tools(self) -> List[str]:
+        """获取可用工具列表"""
+        return [
+            "get_object_by_identifier",
+            "get_bibliographic_data", 
+            "search_objects_by_coordinates"
+        ]
 
 class State(TypedDict):
     """图状态定义"""
@@ -68,24 +222,44 @@ class AstrophysicsQueryClient:
     使用LangGraph构建查询流程，集成豆包API和MCP工具
     """
     
-    def __init__(self):
+    def __init__(self, use_mcp=True):
         logger.info("🏗️ 初始化天体物理学查询客户端...")
         self.llm = None
         self.mcp_tools = []
         self.graph = None
+        self.mcp_session = None
+        self.mcp_read = None
+        self.mcp_write = None
+        self.use_mcp = use_mcp
+        self.mcp_available = False
         
         self._setup_llm()
-        self._setup_mock_tools()
+        # 不在这里设置工具，等MCP初始化完成后再设置
         self._build_graph()
         
         logger.info("✅ 客户端初始化完成")
     
     async def initialize_mcp(self):
         """异步初始化MCP工具"""
-        await self._setup_mcp_tools()
-        # 重新构建图以使用MCP工具
+        if self.use_mcp:
+            logger.info("🔗 尝试初始化MCP连接...")
+            try:
+                await self._setup_mcp_tools()
+                self.mcp_available = True
+                logger.info("✅ MCP连接成功，使用MCP工具")
+            except Exception as e:
+                logger.warning(f"⚠️ MCP连接失败: {str(e)}")
+                logger.info("🔄 回退到直接调用工具模式")
+                self.mcp_available = False
+                self._setup_mock_tools()
+        else:
+            logger.info("🔧 使用直接调用工具模式")
+            self.mcp_available = False
+            self._setup_mock_tools()
+        
+        # 重新构建图以使用当前工具
         self._build_graph()
-    
+
     def _setup_llm(self):
         """设置豆包API LLM"""
         try:
@@ -93,15 +267,15 @@ class AstrophysicsQueryClient:
             config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'conf.yaml')
             conf = load_yaml_config(config_path)
             basic_model_conf = conf.get('BASIC_MODEL', {})
-            
+
             # 获取豆包API配置
             api_key = basic_model_conf.get('api_key')
             base_url = basic_model_conf.get('base_url', 'https://ark.cn-beijing.volces.com/api/v3')
             model = basic_model_conf.get('model', 'doubao-pro-4k')
-            
+
             if not api_key:
                 raise ValueError("请在conf.yaml文件中设置BASIC_MODEL.api_key")
-            
+
             # 使用OpenAI兼容接口连接豆包，并绑定工具
             self.llm = ChatOpenAI(
                 model=model,
@@ -111,42 +285,68 @@ class AstrophysicsQueryClient:
                 max_tokens=2000
             )
             logger.info(f"豆包API LLM 初始化成功 - 模型: {model}, 基础URL: {base_url}")
-            
+
         except Exception as e:
             logger.error(f"LLM初始化失败: {str(e)}")
             raise
     
     async def _setup_mcp_tools(self):
         """设置MCP工具适配器"""
-        if MCPTool is None or load_mcp_tools is None or ClientSession is None:
-            logger.warning("MCP适配器不可用，将使用直接调用工具")
-            self._setup_mock_tools()
-            return
+        # 创建MCP客户端包装器实例
+        self.mcp_client = MCPClientWrapper()
         
-        try:
-            # 创建MCP会话
-            import shutil
-            python_path = shutil.which('python')
-            
-            server_params = StdioServerParameters(
-                command=python_path,
-                args=['server.py']
-            )
-            
-            # 创建异步会话并加载工具
-            async with stdio_client(server_params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    self.mcp_tools = await load_mcp_tools(session=session)
-                    logger.info(f"成功连接MCP服务器，获取到 {len(self.mcp_tools)} 个工具")
-            
-        except Exception as e:
-            logger.error(f"MCP工具设置失败: {str(e)}")
-            logger.info("使用直接调用工具代替")
-            self._setup_mock_tools()
+        # 启动MCP服务器
+        logger.info("正在启动MCP服务器...")
+        if not await self.mcp_client.start_server():
+            raise Exception("MCP服务器启动失败")
+        
+        logger.info("MCP服务器启动成功")
+        
+        # 创建MCP工具包装器
+        from langchain_core.tools import tool
+        
+        @tool
+        def get_object_by_identifier_mcp(object_id: str) -> str:
+            """根据天体标识符获取基础信息 (MCP版本)"""
+            try:
+                # 使用MCP客户端调用工具
+                result = asyncio.run(self.mcp_client.call_tool("get_object_by_identifier", {"object_id": object_id}))
+                return result
+            except Exception as e:
+                return f"查询失败: {str(e)}"
+        
+        @tool
+        def get_bibliographic_data_mcp(object_id: str) -> str:
+            """获取天体的参考文献信息 (MCP版本)"""
+            try:
+                result = asyncio.run(self.mcp_client.call_tool("get_bibliographic_data", {"object_id": object_id}))
+                return result
+            except Exception as e:
+                return f"文献查询失败: {str(e)}"
+        
+        @tool
+        def search_objects_by_coordinates_mcp(ra: float, dec: float, radius: float = 0.1) -> str:
+            """根据坐标搜索附近的天体 (MCP版本)"""
+            try:
+                result = asyncio.run(self.mcp_client.call_tool("search_objects_by_coordinates", {
+                    "ra": ra, 
+                    "dec": dec, 
+                    "radius": radius
+                }))
+                return result
+            except Exception as e:
+                return f"坐标搜索失败: {str(e)}"
+        
+        self.mcp_tools = [
+            get_object_by_identifier_mcp,
+            get_bibliographic_data_mcp,
+            search_objects_by_coordinates_mcp
+        ]
+        
+        logger.info(f"成功创建 {len(self.mcp_tools)} 个MCP工具")
     
     def _setup_mock_tools(self):
-        """设置真实工具（当MCP不可用时，直接调用工具函数）"""
+        """设置直接调用工具（直接调用tools.py中的函数，不使用MCP服务器）"""
         from langchain_core.tools import tool
         from .tools import get_object_by_identifier as _get_object_by_identifier
         from .tools import get_bibliographic_data as _get_bibliographic_data
@@ -242,7 +442,8 @@ class AstrophysicsQueryClient:
                 return f"坐标搜索失败: {str(e)}"
         
         self.mcp_tools = [get_object_by_identifier, get_bibliographic_data, search_objects_by_coordinates]
-        logger.info("真实工具设置完成（直接调用工具函数）")
+        logger.info(f"直接调用工具设置完成，工具数量: {len(self.mcp_tools)}")
+        logger.info(f"工具名称: {[tool.name for tool in self.mcp_tools]}")
     
     def _build_graph(self):
         """构建LangGraph查询流程"""
@@ -252,21 +453,30 @@ class AstrophysicsQueryClient:
         # 创建状态图
         workflow = StateGraph(State)
         
-        # 添加节点 - 简化流程，让LLM直接选择工具
+        # 添加节点 - 包含响应生成
         workflow.add_node("agent", self._agent_node)
         workflow.add_node("tools", tool_node)
+        workflow.add_node("response", self._generate_response)
         
-        # 设置边 - 简化的工作流
+        # 设置边 - 完整的工作流
         workflow.set_entry_point("agent")
         workflow.add_conditional_edges(
             "agent",
             self._should_continue,
             {
                 "continue": "tools",
-                "end": END
+                "end": "response"
             }
         )
-        workflow.add_edge("tools", "agent")
+        workflow.add_conditional_edges(
+            "tools",
+            self._should_continue,
+            {
+                "continue": "agent",
+                "end": "response"
+            }
+        )
+        workflow.add_edge("response", END)
         
         # 编译图
         self.graph = workflow.compile()
@@ -292,6 +502,7 @@ class AstrophysicsQueryClient:
    - 适用于：提供坐标搜索天体、了解区域天体分布等
 
 请根据用户的查询，选择合适的工具并调用。如果需要多个工具，可以依次调用。
+
 """
         
         # 添加系统消息
@@ -299,6 +510,13 @@ class AstrophysicsQueryClient:
             messages = [SystemMessage(content=system_prompt)] + messages
         
         try:
+            # 调试信息：检查工具列表
+            logger.info(f"🔧 可用工具数量: {len(self.mcp_tools)}")
+            if self.mcp_tools:
+                logger.info(f"🔧 工具列表: {[tool.name for tool in self.mcp_tools]}")
+            else:
+                logger.warning("⚠️ 工具列表为空！")
+            
             # 绑定工具到LLM并调用
             llm_with_tools = self.llm.bind_tools(self.mcp_tools)
             response = await llm_with_tools.ainvoke(messages)
@@ -309,6 +527,7 @@ class AstrophysicsQueryClient:
                 logger.info(f"🔧 选择工具: {[tool_call['name'] for tool_call in response.tool_calls]}")
             else:
                 logger.info("📝 直接返回文本响应")
+                logger.info(f"📝 响应内容: {response.content[:200]}...")
             
             state["messages"] = messages
             
@@ -325,16 +544,23 @@ class AstrophysicsQueryClient:
         messages = state["messages"]
         last_message = messages[-1]
         
-        # 如果最后一条消息包含工具调用，则继续
+        # 如果最后一条消息包含工具调用，则继续到工具节点
         if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
             return "continue"
         else:
-            # 设置最终响应
+            # 如果最后一条消息是工具结果，则转到响应生成节点
             if hasattr(last_message, 'content') and last_message.content:
-                state["final_response"] = last_message.content
+                # 检查是否是工具结果（通常包含JSON格式的数据）
+                content = last_message.content
+                if isinstance(content, str) and ('{' in content and '}' in content):
+                    return "end"  # 转到response节点
+                else:
+                    # 直接文本响应，设置最终响应
+                    state["final_response"] = content
+                    return "end"
             else:
                 state["final_response"] = "查询完成，但没有返回结果"
-            return "end"
+                return "end"
     
     async def _analyze_query(self, state: State) -> State:
         """分析用户查询"""
@@ -408,7 +634,7 @@ class AstrophysicsQueryClient:
 
 请：
 1. 总结查询结果的关键信息
-2. 用通俗易懂的语言解释天文数据
+2. 用专业严谨的语言解释天文数据
 3. 如果有多个结果，进行适当的组织和分类
 4. 保持科学严谨性的同时，确保可读性
 """
@@ -454,7 +680,7 @@ class AstrophysicsQueryClient:
         
         try:
             # 执行图流程，设置递归限制
-            config = {"recursion_limit": 10}
+            config = {"recursion_limit": 5}
             result = await self.graph.ainvoke(initial_state, config=config)
             
             # 如果没有final_response，从最后一条消息中获取
@@ -476,7 +702,18 @@ class AstrophysicsQueryClient:
     
     def query_sync(self, user_input: str) -> str:
         """同步查询接口"""
+        # 先初始化MCP工具
+        asyncio.run(self.initialize_mcp())
         return asyncio.run(self.query(user_input))
+    
+    async def close(self):
+        """关闭MCP连接"""
+        if hasattr(self, 'mcp_client') and self.mcp_client:
+            try:
+                await self.mcp_client.stop_server()
+                logger.info("MCP服务器已关闭")
+            except Exception as e:
+                logger.error(f"关闭MCP服务器时出错: {str(e)}")
 
 async def main():
     """主函数 - 交互式查询界面"""
@@ -494,35 +731,50 @@ async def main():
     try:
         client = AstrophysicsQueryClient()
         print("✅ 客户端初始化成功")
+        
+        # 初始化MCP连接
+        print("🔗 正在初始化MCP连接...")
+        await client.initialize_mcp()
+        
+        if client.mcp_available:
+            print("✅ MCP连接成功，使用MCP工具")
+        else:
+            print("⚠️ 使用直接调用工具模式")
+            
     except Exception as e:
         print(f"❌ 客户端初始化失败: {str(e)}")
         return
     
     # 交互循环
-    while True:
-        try:
-            user_input = input("\n🔍 请输入您的查询: ").strip()
-            
-            if user_input.lower() in ['quit', 'exit', '退出']:
-                print("👋 再见！")
+    try:
+        while True:
+            try:
+                user_input = input("\n🔍 请输入您的查询: ").strip()
+                
+                if user_input.lower() in ['quit', 'exit', '退出']:
+                    print("👋 再见！")
+                    break
+                
+                if not user_input:
+                    continue
+                
+                print("\n⏳ 正在处理查询...")
+                response = await client.query(user_input)
+                
+                print("\n📋 查询结果:")
+                print("-" * 40)
+                print(response)
+                print("-" * 40)
+                
+            except KeyboardInterrupt:
+                print("\n👋 再见！")
                 break
-            
-            if not user_input:
-                continue
-            
-            print("\n⏳ 正在处理查询...")
-            response = await client.query(user_input)
-            
-            print("\n📋 查询结果:")
-            print("-" * 40)
-            print(response)
-            print("-" * 40)
-            
-        except KeyboardInterrupt:
-            print("\n👋 再见！")
-            break
-        except Exception as e:
-            print(f"\n❌ 查询出错: {str(e)}")
+            except Exception as e:
+                print(f"\n❌ 查询出错: {str(e)}")
+    finally:
+        # 确保关闭MCP连接
+        await client.close()
+
 
 def create_client():
     """创建客户端实例 - 用于非交互式调用"""
@@ -532,13 +784,14 @@ def create_client():
         logger.error(f"客户端创建失败: {str(e)}")
         raise
 
+
 def query_astro_data(user_input: str) -> str:
     """
     同步查询接口 - 用于集成到其他模块
-    
+
     Args:
         user_input: 用户查询输入
-        
+
     Returns:
         str: 查询结果
     """
@@ -548,6 +801,7 @@ def query_astro_data(user_input: str) -> str:
     except Exception as e:
         logger.error(f"查询执行失败: {str(e)}")
         return f"数据检索失败: {str(e)}"
+
 
 if __name__ == "__main__":
     try:

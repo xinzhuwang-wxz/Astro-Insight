@@ -59,25 +59,6 @@ class DefaultUserService(BaseService, IUserService):
 class DefaultTaskService(BaseService, ITaskService):
     """默认任务服务实现"""
     
-    def classify_task(self, user_input: str, user_type: UserType) -> TaskType:
-        """分类任务类型"""
-        # 分类相关关键词 - 只包含明确指向分类任务的关键词
-        classification_keywords = [
-            "分类", "classify", "什么类型", "天体类型", "天体分类", "属于什么", "属于哪类"
-        ]
-        
-        # 优先检查是否包含分类关键词
-        if any(keyword in user_input for keyword in classification_keywords):
-            return TaskType.CLASSIFICATION
-        
-        if "数据" in user_input or "检索" in user_input or "data" in user_input.lower():
-            return TaskType.DATA_RETRIEVAL
-        elif "文献" in user_input or "literature" in user_input.lower():
-            return TaskType.LITERATURE_REVIEW
-        elif "代码" in user_input or "code" in user_input.lower():
-            return TaskType.CODE_GENERATION
-        else:
-            return TaskType.QA
     
     def _extract_celestial_name(self, user_input: str) -> str:
         """从用户输入中提取天体名称"""
@@ -267,14 +248,6 @@ class DefaultIdentityService(BaseService, IIdentityService):
 class DefaultClassificationService(BaseService, IClassificationService):
     """默认分类服务实现"""
     
-    def classify_celestial_object(self, query: str) -> Dict[str, Any]:
-        """分类天体对象"""
-        return {
-            "object_type": "unknown",
-            "confidence": 0.5,
-            "classification_result": "分类功能待实现",
-            "metadata": {"query": query}
-        }
     
     def get_classification_config(self, user_type: UserType) -> Dict[str, Any]:
         """获取分类配置"""

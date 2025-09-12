@@ -53,8 +53,6 @@ from .templates import (
     ClassificationResult,
     EnhancedClassificationEngine,
     get_classification_engine,
-    classify_celestial_query,
-    batch_classify_queries,
     create_classification_template,
 )
 
@@ -131,8 +129,6 @@ __all__ = [
     "ClassificationResult",
     "EnhancedClassificationEngine",
     "get_classification_engine",
-    "classify_celestial_query",
-    "batch_classify_queries",
     "create_classification_template",
     # 历史记录模块
     "QueryHistoryEntry",
@@ -174,6 +170,4 @@ __author__ = "Astro Insight Team"
 __description__ = "Enhanced Astronomical Object Classification and Retrieval System"
 
 # 便捷导入别名
-from .templates import classify_celestial_query as classify
-from .templates import batch_classify_queries as batch_classify
 from .database import DatabaseAPI as DB

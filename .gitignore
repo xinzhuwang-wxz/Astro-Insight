@@ -19,14 +19,14 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-PYTHONPATH
+MANIFEST
 
-# Virtual environments
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # IDE
 .vscode/
@@ -50,33 +50,13 @@ logs/
 
 # Database
 *.db
-*.sqlite
 *.sqlite3
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# Cache
-.cache/
-.pytest_cache/
-
-# Coverage
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
-
-# Jupyter
-.ipynb_checkpoints
-
-# Node.js (if any)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Output files
+output/*.png
+output/*.jpg
+output/*.jpeg
+output/*.gif
 
 # Temporary files
 *.tmp
@@ -84,41 +64,55 @@ yarn-error.log*
 temp/
 tmp/
 
-# Test reports
-test_report_*.json
-verification_report.json
+# Node modules (if any)
+node_modules/
 
-# Data files
-data/
-*.csv
-*.json
-*.xml
-*.yaml
-*.yml
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# Backup files
-*.bak
-*.backup
-*.orig
+# pyenv
+.python-version
 
-# Documentation build
-docs/_build/
+# pipenv
+Pipfile.lock
 
-# PyCharm
-.idea/
+# PEP 582
+__pypackages__/
 
-# Spyder
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
 .spyderproject
 .spyproject
 
-# Rope
+# Rope project settings
 .ropeproject
 
-# mkdocs
+# mkdocs documentation
 /site
 
 # mypy
 .mypy_cache/
+.dmypy.json
+dmypy.json
 
-# docu
-.trae/
+# Pyre type checker
+.pyre/
+
+# API keys and sensitive data
+*.key
+*.pem
+secrets/

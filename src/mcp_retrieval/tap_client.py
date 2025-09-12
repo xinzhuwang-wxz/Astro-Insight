@@ -37,16 +37,26 @@ def run_adql(query: str) -> Dict[str, Any]:
         
         # 执行ADQL查询
         
-        # 发送HTTP请求
-        with httpx.Client(timeout=60.0) as client:
-            response = client.post(TAP_URL, data=payload, headers=headers)
-            response.raise_for_status()
+        # 发送HTTP请求（带重试机制）
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                with httpx.Client(timeout=120.0) as client:
+                    response = client.post(TAP_URL, data=payload, headers=headers)
+                    response.raise_for_status()
+                break
+            except httpx.TimeoutException:
+                if attempt < max_retries - 1:
+                    logger.warning(f"Request timeout, retrying... (attempt {attempt + 1}/{max_retries})")
+                    continue
+                else:
+                    raise
             
         # TAP查询成功
         
         # 调试：打印响应内容的前1000个字符
-        logger.info(f"响应内容预览: {response.text[:1000]}")
-        logger.info(f"响应Content-Type: {response.headers.get('content-type', 'unknown')}")
+        logger.info(f"Response content preview: {response.text[:1000]}")
+        logger.info(f"Response Content-Type: {response.headers.get('content-type', 'unknown')}")
         
         # 检查响应格式
         content_type = response.headers.get('content-type', '').lower()

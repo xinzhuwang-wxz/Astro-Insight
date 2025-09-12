@@ -141,71 +141,6 @@ class EnhancedClassificationEngine:
             }
         }
     
-    def classify_query(self, request: ClassificationRequest) -> List[ClassificationResult]:
-        """分类查询"""
-        query = request.query.lower()
-        results = []
-        
-        # 直接匹配已知天体对象
-        for obj_name, obj_data in self.celestial_objects_db.items():
-            if obj_name.lower() in query or obj_data.get("common_name", "").lower() in query:
-                confidence = 0.9  # 直接匹配的高置信度
-                result = ClassificationResult(
-                    object_name=obj_data["name"],
-                    object_type=obj_data["type"],
-                    confidence=confidence,
-                    coordinates=obj_data.get("coordinates"),
-                    magnitude=obj_data.get("magnitude"),
-                    distance=obj_data.get("distance"),
-                    spectral_class=obj_data.get("spectral_class"),
-                    description=obj_data.get("description"),
-                    metadata={
-                        "common_name": obj_data.get("common_name"),
-                        "match_type": "direct_match",
-                        "query": request.query
-                    }
-                )
-                results.append(result)
-        
-        # 基于模板的分类
-        for obj_type, template in self.classification_templates.items():
-            base_confidence = 0.3
-            
-            # 关键词匹配
-            for keyword in template["keywords"]:
-                if keyword.lower() in query:
-                    base_confidence += 0.2
-            
-            # 模式匹配
-            import re
-            for pattern in template["patterns"]:
-                if re.search(pattern, query, re.IGNORECASE):
-                    base_confidence += 0.3
-            
-            # 置信度提升
-            base_confidence += template.get("confidence_boost", 0)
-            
-            if base_confidence >= request.confidence_threshold:
-                result = ClassificationResult(
-                    object_name=f"Unknown {obj_type}",
-                    object_type=obj_type,
-                    confidence=min(base_confidence, 1.0),
-                    description=f"Classified as {obj_type} based on query patterns",
-                    metadata={
-                        "match_type": "template_match",
-                        "query": request.query,
-                        "matched_keywords": [kw for kw in template["keywords"] if kw.lower() in query]
-                    }
-                )
-                results.append(result)
-        
-        # 按置信度排序并限制结果数量
-        results.sort(key=lambda x: x.confidence, reverse=True)
-        return results[:request.max_results]
-    
-    def batch_classify(self, requests: List[ClassificationRequest]) -> List[List[ClassificationResult]]:
-        """批量分类"""
-        return [self.classify_query(request) for request in requests]
 
 
 # 全局分类引擎实例
@@ -220,18 +155,6 @@ def get_classification_engine() -> EnhancedClassificationEngine:
     return _classification_engine
 
 
-def classify_celestial_query(query: str, **kwargs) -> List[ClassificationResult]:
-    """分类天体查询 - 便捷函数"""
-    request = ClassificationRequest(query=query, **kwargs)
-    engine = get_classification_engine()
-    return engine.classify_query(request)
-
-
-def batch_classify_queries(queries: List[str], **kwargs) -> List[List[ClassificationResult]]:
-    """批量分类查询 - 便捷函数"""
-    requests = [ClassificationRequest(query=query, **kwargs) for query in queries]
-    engine = get_classification_engine()
-    return engine.batch_classify(requests)
 
 
 def create_classification_template(object_type: str, keywords: List[str], patterns: List[str] = None, confidence_boost: float = 0.0) -> Dict[str, Any]:
