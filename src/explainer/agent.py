@@ -154,6 +154,7 @@ class ExplainerAgent:
                 "code_summary": self._summarize_code(coder_output.get("code", "")),
                 "complexity": coder_output.get("complexity", ""),
                 "execution_output": coder_output.get("output", ""),
+                "generated_texts": coder_output.get("generated_texts", []),
                 "focus_aspects": request.get("focus_aspects", [])
             }
             
@@ -218,6 +219,87 @@ class ExplainerAgent:
                 "message": f"图片分析失败: {str(e)}"
             }
             return state
+
+    def _generate_text_only_explanations(self, state: ExplainerState) -> ExplainerState:
+        """无图模式：基于执行输出与文本工件生成解释/总结/洞察"""
+        try:
+            analysis_context = state["analysis_context"]
+            text_artifacts = analysis_context.get("generated_texts", [])
+            stdout_text = analysis_context.get("execution_output", "")
+
+            # 组装可供LLM的文本上下文
+            combined_texts = []
+            if stdout_text:
+                combined_texts.append(f"[STDOUT]\n{stdout_text}")
+            for p in text_artifacts:
+                try:
+                    content = Path(p).read_text(encoding='utf-8', errors='ignore')
+                except Exception:
+                    try:
+                        content = Path(p).read_text(errors='ignore')
+                    except Exception:
+                        content = ""
+                if content:
+                    combined_texts.append(f"[FILE] {Path(p).name}\n{content}")
+
+            # 利用 prompts 现有结构：构造一个“文本解释”的 prompt
+            from .prompts import ExplanationPrompts
+            prompts = self.prompts if hasattr(self, 'prompts') else ExplanationPrompts()
+
+            # 复用 detailed prompt 的结构，但在背景信息中仅使用文本来源
+            context_for_prompt = analysis_context.copy()
+            context_for_prompt["image_name"] = "无图片（文本模式）"
+
+            base_prompt = prompts.get_explanation_prompt(
+                state["request"]["explanation_type"].value,
+                context_for_prompt
+            )
+
+            text_block = "\n\n## 文本材料\n" + "\n\n".join(combined_texts[:3])  # 控长度
+            full_prompt = base_prompt + text_block + "\n\n请基于上述文本材料进行解释与总结。"
+
+            # 通过 VLMClient 走同一请求通道，但不传图片：使用一个内部方法实现 text-only
+            explanation_text = self._call_text_model(full_prompt)
+
+            explanations = [{
+                "image_path": None,
+                "image_name": "文本模式",
+                "explanation": explanation_text,
+                "processing_time": 0,
+                "key_findings": self._extract_key_findings(explanation_text)
+            }]
+
+            # 总结与洞察
+            summary_text = self._call_text_model(self.prompts.get_summary_prompt([explanation_text], analysis_context))
+            insights = self._parse_insights(self._call_text_model(self.prompts.get_insight_extraction_prompt([explanation_text])))
+
+            state["analysis_results"] = {
+                "explanations": explanations,
+                "summary": summary_text or "",
+                "insights": insights or [],
+                "successful_count": 1 if explanation_text else 0,
+                "total_count": 0
+            }
+            return state
+        except Exception as e:
+            state["error_info"] = {
+                "type": "text_only_explanation_error",
+                "message": f"文本模式解释失败: {str(e)}"
+            }
+            return state
+
+    def _call_text_model(self, prompt: str) -> str:
+        """调用纯文本LLM（借用 VLMClient 的 HTTP 通道，如果不支持则返回空字符串）"""
+        try:
+            # 如果 Explain API 仅支持含 image 的消息，这里降级使用第一原则：发送纯 text 请求
+            payload = {
+                "model": getattr(self.vlm_client, "model", None),
+                "messages": [{"role": "user", "content": prompt}]
+            }
+            resp = self.vlm_client._make_request(payload)  # 复用其请求方法
+            return resp.get("content", "") if resp.get("success") else ""
+        except Exception:
+            return ""
     
     def _generate_explanations(self, state: ExplainerState) -> ExplainerState:
         """生成最终解释"""
@@ -225,6 +307,10 @@ class ExplainerAgent:
             vlm_responses = state["vlm_responses"]
             analysis_context = state["analysis_context"]
             
+            # 无图模式：如果没有任何图片待分析，则改走文本模式
+            if not vlm_responses and not state.get("processed_images"):
+                return self._generate_text_only_explanations(state)
+
             # 处理每个图片的解释
             explanations = []
             successful_explanations = []

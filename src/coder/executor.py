@@ -53,7 +53,8 @@ class CodeExecutor:
                 output=None,
                 error=f"安全检查失败: {safety_check['reason']}",
                 execution_time=time.time() - start_time,
-                generated_files=[]
+                generated_files=[],
+                generated_texts=[]
             )
         
         # 执行前记录已有文件
@@ -66,6 +67,7 @@ class CodeExecutor:
             
             # 执行后获取新生成的文件（差集 + 时间窗口）
             generated_files = self._find_new_generated_files(before_files, start_time)
+            generated_texts = self._find_new_generated_texts(before_files, start_time)
             
             return CodeExecutionResult(
                 status=ExecutionStatus.SUCCESS if result["success"] else ExecutionStatus.ERROR,
@@ -73,7 +75,8 @@ class CodeExecutor:
                 output=result["output"],
                 error=result["error"],
                 execution_time=execution_time,
-                generated_files=generated_files
+                generated_files=generated_files,
+                generated_texts=generated_texts
             )
             
         except Exception as e:
@@ -83,7 +86,8 @@ class CodeExecutor:
                 output=None,
                 error=f"执行异常: {str(e)}",
                 execution_time=time.time() - start_time,
-                generated_files=[]
+                generated_files=[],
+                generated_texts=[]
             )
     
     def _preprocess_code(self, code: str) -> str:
@@ -93,12 +97,23 @@ class CodeExecutor:
         
         for line in lines:
             # 处理输出目录
-            if 'plt.savefig' in line or '.savefig' in line:
-                # 确保图片保存到output目录
-                if 'output/' not in line:
-                    line = line.replace('plt.savefig(', f'plt.savefig("{self.output_dir}/')
-                    line = line.replace('.savefig(', f'.savefig("{self.output_dir}/')
-            
+            if 'savefig(' in line:
+                # 避免破坏 f-string/变量/Path 等动态路径
+                dynamic_tokens = ["f'", 'f"', '{', 'output_dir', 'Path(', 'os.path', 'pathlib']
+                is_dynamic = any(tok in line for tok in dynamic_tokens)
+
+                # 仅在参数为纯字符串字面量，且未显式指向 output 时才注入
+                if not is_dynamic:
+                    try:
+                        before, after = line.split('savefig(', 1)
+                        after_stripped = after.lstrip()
+                        if after_stripped.startswith("'") or after_stripped.startswith('"'):
+                            # 纯字面量路径，若未包含 output/ 则前置输出目录
+                            if 'output/' not in after_stripped and str(self.output_dir) not in after_stripped:
+                                line = before + f'savefig("{self.output_dir}/' + after_stripped[1:]
+                    except Exception:
+                        pass
+
             # 处理文件路径
             if 'pd.read_csv' in line or 'pd.read_' in line:
                 # 确保使用正确的路径分隔符
@@ -211,6 +226,9 @@ class CodeExecutor:
         try:
             # 准备执行环境
             import builtins
+            def _safe_exit(code: int = 0):
+                raise SystemExit(code)
+
             globals_dict = {
                 '__builtins__': {
                     'print': print,
@@ -241,6 +259,8 @@ class CodeExecutor:
                     '__import__': __import__,  # 允许import
                     'locals': locals,         # 添加 locals
                     'globals': globals,       # 添加 globals
+                    'exit': _safe_exit,       # 安全退出
+                    'quit': _safe_exit,       # 安全退出
                 },
                 '__name__': '__main__',       # 添加 __name__
                 '__file__': '<generated_code>',  # 添加 __file__
@@ -256,7 +276,14 @@ class CodeExecutor:
                 "output": output_buffer.getvalue(),
                 "error": None
             }
-            
+
+        except SystemExit as e:
+            # 将用户代码中的 exit()/quit() 视为正常结束
+            return {
+                "success": True,
+                "output": output_buffer.getvalue(),
+                "error": None
+            }
         except Exception as e:
             error_info = error_buffer.getvalue()
             if not error_info:
@@ -291,6 +318,15 @@ class CodeExecutor:
         # 执行开始后被修改/写入的文件（覆盖写入的场景）
         time_new = {f for f in after_files if Path(f).suffix.lower() in allowed_ext and Path(f).stat().st_mtime >= start_time}
         
+        combined = sorted(diff_new.union(time_new), key=lambda p: Path(p).stat().st_mtime)
+        return list(combined)
+
+    def _find_new_generated_texts(self, before_files: set, start_time: float) -> List[str]:
+        """根据执行前后差集与修改时间，返回本次新生成的文本类工件文件"""
+        after_files = set(self._list_output_files())
+        allowed_ext = {'.txt', '.log', '.md', '.json', '.csv'}
+        diff_new = {f for f in (after_files - before_files) if Path(f).suffix.lower() in allowed_ext}
+        time_new = {f for f in after_files if Path(f).suffix.lower() in allowed_ext and Path(f).stat().st_mtime >= start_time}
         combined = sorted(diff_new.union(time_new), key=lambda p: Path(p).stat().st_mtime)
         return list(combined)
     

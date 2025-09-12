@@ -47,7 +47,8 @@ class CodeExecutionResult(TypedDict):
     output: Optional[str]
     error: Optional[str]
     execution_time: float
-    generated_files: List[str]  # 生成的图片等文件路径
+    generated_files: List[str]  # 生成的图片文件路径
+    generated_texts: List[str]  # 生成的文本类工件（.txt/.log/.md 等）
 
 
 class CoderAgentState(TypedDict):

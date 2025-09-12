@@ -37,6 +37,7 @@ class CoderOutput(TypedDict):
     output: str
     execution_time: float
     generated_files: List[str]  # 图片文件路径列表
+    generated_texts: List[str]  # 文本工件路径列表
     dataset_used: str
     complexity: str
     retry_count: int

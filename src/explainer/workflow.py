@@ -245,12 +245,7 @@ class ExplainerWorkflow:
         
         # 检查是否有生成的图片
         generated_files = coder_result.get("generated_files", [])
-        if not generated_files:
-            return {
-                "success": False,
-                "error": "Coder没有生成任何图片文件，无法进行解释",
-                "error_type": "no_images"
-            }
+        # 无图时允许进入文本模式解释
         
         # 构建CoderOutput结构
         coder_output = CoderOutput(
@@ -259,6 +254,7 @@ class ExplainerWorkflow:
             output=coder_result.get("output", ""),
             execution_time=coder_result.get("execution_time", 0),
             generated_files=generated_files,
+            generated_texts=coder_result.get("generated_texts", []),
             dataset_used=coder_result.get("dataset_used", ""),
             complexity=coder_result.get("complexity", ""),
             retry_count=coder_result.get("retry_count", 0),

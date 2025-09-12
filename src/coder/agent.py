@@ -441,6 +441,7 @@ class CodeGeneratorAgent:
                 "output": result["output"],
                 "execution_time": result["execution_time"],
                 "generated_files": result["generated_files"],
+                "generated_texts": result.get("generated_texts", []),
                 "dataset_used": state["selected_dataset"]["name"],
                 "complexity": state["generation_request"]["complexity"].value if state["generation_request"] else "unknown",
                 "retry_count": state["retry_count"]
