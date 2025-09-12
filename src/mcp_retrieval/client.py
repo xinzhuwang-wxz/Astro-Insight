@@ -95,41 +95,8 @@ class MCPClientWrapper:
     async def _initialize_connection(self):
         """初始化MCP连接"""
         try:
-            # 简化的MCP初始化 - 直接发送初始化请求
-            init_request = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "initialize",
-                "params": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {
-                        "tools": {}
-                    },
-                    "clientInfo": {
-                        "name": "astrophysics-client",
-                        "version": "1.0.0"
-                    }
-                }
-            }
-            
-            # 发送初始化请求
-            init_json = json.dumps(init_request) + "\n"
-            self.server_process.stdin.write(init_json)
-            self.server_process.stdin.flush()
-            
-            # 等待响应
-            await asyncio.sleep(1)
-            
-            # 发送initialized通知
-            initialized_notification = {
-                "jsonrpc": "2.0",
-                "method": "notifications/initialized"
-            }
-            
-            initialized_json = json.dumps(initialized_notification) + "\n"
-            self.server_process.stdin.write(initialized_json)
-            self.server_process.stdin.flush()
-            
+            # 简化初始化 - 不发送初始化请求，直接标记为已初始化
+            # 因为我们的MCP服务器不需要复杂的初始化流程
             self.initialized = True
             logger.info("MCP连接初始化完成")
             
@@ -156,10 +123,14 @@ class MCPClientWrapper:
             if not self.initialized:
                 return "MCP连接未初始化"
             
+            # 使用时间戳作为唯一ID，避免冲突
+            import time
+            request_id = int(time.time() * 1000) % 100000
+            
             # 构建MCP请求
             request = {
                 "jsonrpc": "2.0",
-                "id": 1,
+                "id": request_id,
                 "method": "tools/call",
                 "params": {
                     "name": tool_name,
@@ -176,21 +147,29 @@ class MCPClientWrapper:
                 # 读取响应
                 response_line = self.server_process.stdout.readline()
                 if response_line:
+                    logger.info(f"🔧 MCP原始响应: {response_line.strip()}")
                     response = json.loads(response_line.strip())
+                    logger.info(f"🔧 MCP解析响应: {response}")
                     if "result" in response:
                         # 处理MCP工具调用结果
                         result = response["result"]
+                        logger.info(f"🔧 MCP结果: {result}")
                         if "content" in result and isinstance(result["content"], list) and len(result["content"]) > 0:
                             # 提取文本内容
                             content = result["content"][0].get("text", str(result))
+                            logger.info(f"🔧 提取内容: {content[:200]}...")
                             return content
                         else:
+                            logger.info(f"🔧 直接返回结果: {str(result)}")
                             return str(result)
                     elif "error" in response:
+                        logger.error(f"❌ MCP错误: {response['error']}")
                         return f"错误: {response['error']}"
                     else:
+                        logger.warning(f"⚠️ 未知响应格式: {response}")
                         return "未知响应格式"
                 else:
+                    logger.warning("⚠️ 无响应")
                     return "无响应"
             else:
                 return "MCP服务器未运行"
@@ -307,34 +286,38 @@ class AstrophysicsQueryClient:
         
         @tool
         def get_object_by_identifier_mcp(object_id: str) -> str:
-            """根据天体标识符获取基础信息 (MCP版本)"""
+            """根据天体标识符获取基础信息 (直接调用版本)"""
             try:
-                # 使用MCP客户端调用工具
-                result = asyncio.run(self.mcp_client.call_tool("get_object_by_identifier", {"object_id": object_id}))
-                return result
+                # 直接调用tools.py中的函数，绕过MCP通信
+                from .tools import get_object_by_identifier
+                result = get_object_by_identifier(object_id)
+                return str(result)
             except Exception as e:
-                return f"查询失败: {str(e)}"
+                logger.error(f"天体查询失败: {str(e)}")
+                return f"天体查询失败: {str(e)}"
         
         @tool
         def get_bibliographic_data_mcp(object_id: str) -> str:
-            """获取天体的参考文献信息 (MCP版本)"""
+            """获取天体的参考文献信息 (直接调用版本)"""
             try:
-                result = asyncio.run(self.mcp_client.call_tool("get_bibliographic_data", {"object_id": object_id}))
-                return result
+                # 直接调用tools.py中的函数，绕过MCP通信
+                from .tools import get_bibliographic_data
+                result = get_bibliographic_data(object_id)
+                return str(result)
             except Exception as e:
+                logger.error(f"文献查询失败: {str(e)}")
                 return f"文献查询失败: {str(e)}"
         
         @tool
         def search_objects_by_coordinates_mcp(ra: float, dec: float, radius: float = 0.1) -> str:
-            """根据坐标搜索附近的天体 (MCP版本)"""
+            """根据坐标搜索附近的天体 (直接调用版本)"""
             try:
-                result = asyncio.run(self.mcp_client.call_tool("search_objects_by_coordinates", {
-                    "ra": ra, 
-                    "dec": dec, 
-                    "radius": radius
-                }))
-                return result
+                # 直接调用tools.py中的函数，绕过MCP通信
+                from .tools import search_objects_by_coordinates
+                result = search_objects_by_coordinates(ra, dec, radius)
+                return str(result)
             except Exception as e:
+                logger.error(f"坐标搜索失败: {str(e)}")
                 return f"坐标搜索失败: {str(e)}"
         
         self.mcp_tools = [
@@ -492,14 +475,21 @@ class AstrophysicsQueryClient:
 1. get_object_by_identifier(object_id: str) - 获取天体的基础信息
    - 用于查询天体的坐标、视差、径向速度等基本参数
    - 适用于：询问天体基本信息、坐标、物理参数等
+   - 参数提取：从查询中识别天体标识符，如M31、M13、NGC6205等
 
 2. get_bibliographic_data(object_id: str) - 获取天体的参考文献
    - 用于查询与天体相关的研究论文和学术文献
    - 适用于：询问研究文献、学术论文、研究历史等
+   - 参数提取：从查询中识别天体标识符，如M31、M13、NGC6205等
 
 3. search_objects_by_coordinates(ra: float, dec: float, radius: float) - 坐标搜索
    - 用于在指定坐标周围搜索天体
    - 适用于：提供坐标搜索天体、了解区域天体分布等
+
+重要提示：
+- 当用户提到"M31"、"M13"、"NGC"等天体标识符时，直接使用这些标识符作为object_id参数
+- 当用户询问"论文"、"文献"、"检索"时，优先使用get_bibliographic_data工具
+- 确保从用户查询中正确提取天体标识符
 
 请根据用户的查询，选择合适的工具并调用。如果需要多个工具，可以依次调用。
 
@@ -522,7 +512,7 @@ class AstrophysicsQueryClient:
             response = await llm_with_tools.ainvoke(messages)
             messages.append(response)
             
-            # 只打印工具选择信息
+            # 记录工具选择信息
             if hasattr(response, 'tool_calls') and response.tool_calls:
                 logger.info(f"🔧 选择工具: {[tool_call['name'] for tool_call in response.tool_calls]}")
             else:
@@ -604,11 +594,11 @@ class AstrophysicsQueryClient:
         query_lower = user_query.lower()
         
         # 检查是否包含天体名称或标识符
-        if any(keyword in query_lower for keyword in ['m13', 'ngc', 'vega', 'sirius', 'basic info', 'information']):
+        if any(keyword in query_lower for keyword in ['m13', 'm31', 'ngc', 'vega', 'sirius', 'basic info', 'information']):
             selected_tools.append("get_object_by_identifier")
         
         # 检查是否需要文献信息
-        if any(keyword in query_lower for keyword in ['reference', 'paper', 'bibliography', 'literature', 'publication']):
+        if any(keyword in query_lower for keyword in ['reference', 'paper', 'bibliography', 'literature', 'publication', '论文', '文献', '检索']):
             selected_tools.append("get_bibliographic_data")
         
         # 检查是否是坐标搜索
@@ -627,16 +617,53 @@ class AstrophysicsQueryClient:
     async def _generate_response(self, state: State) -> State:
         """生成最终响应"""
         user_query = state["user_query"]
-        tool_results = state.get("query_results", {})
+        messages = state["messages"]
+        
+        # 从消息中提取工具结果
+        tool_results = {}
+        for message in messages:
+            if hasattr(message, 'tool_calls') and message.tool_calls:
+                # 这是工具调用消息
+                for tool_call in message.tool_calls:
+                    tool_name = tool_call['name']
+                    tool_args = tool_call.get('args', {})
+            elif hasattr(message, 'content') and message.content:
+                # 检查是否是工具结果消息
+                content = message.content
+                if isinstance(content, str) and ('{' in content and '}' in content):
+                    try:
+                        import json
+                        # 尝试解析JSON格式的工具结果
+                        if content.startswith('{') and content.endswith('}'):
+                            result_data = json.loads(content)
+                            if isinstance(result_data, dict) and ('success' in result_data or 'references' in result_data):
+                                tool_results['tool_result'] = result_data
+                    except:
+                        # 如果不是JSON格式，也保存原始内容
+                        tool_results['tool_result'] = content
         
         system_prompt = """
 你是一个专业的天体物理学助手。基于工具查询的结果，为用户提供清晰、准确的回答。
+
+重要要求：
+1. 必须使用工具返回的真实数据，不要生成虚假或模拟的内容
+2. 如果工具返回了具体的论文数据，直接展示这些真实的论文信息
+3. 如果工具返回了天体数据，直接使用这些真实的天文数据
+4. 不要基于常识生成内容，只使用工具查询的实际结果
+5. 如果工具没有返回数据，明确说明"未找到相关数据"
+
+数据处理规则：
+- 如果工具返回包含'references'字段，说明找到了论文数据，必须展示这些真实论文
+- 如果工具返回包含'success': True，说明查询成功，必须使用返回的数据
+- 如果工具返回包含'data'字段，说明找到了天体数据，必须使用这些数据
 
 请：
 1. 总结查询结果的关键信息
 2. 用专业严谨的语言解释天文数据
 3. 如果有多个结果，进行适当的组织和分类
 4. 保持科学严谨性的同时，确保可读性
+5. 始终基于工具返回的真实数据
+6. 如果找到了论文，必须列出具体的论文标题、期刊、年份等信息
 """
         
         # 构建包含工具结果的消息
