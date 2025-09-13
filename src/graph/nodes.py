@@ -1219,13 +1219,13 @@ def data_retrieval_command_node(state: AstroAgentState) -> Command[AstroAgentSta
 @track_node_execution("visualization")
 def visualization_command_node(state: AstroAgentState) -> Command[AstroAgentState]:
     """
-    可视化节点 - 处理专业用户的图表绘制任务
-    新实现：复用 Planner→Coder→Explainer 的一次性 Pipeline（对齐 multi_turn_demo 流程）
+    可视化节点 - 支持多轮对话的可视化需求分析和图表绘制
+    新实现：集成 Planner 多轮对话 → Coder → Explainer 完整流程
     """
     try:
         user_input = state["user_input"]
-
-        # 通过 Planner→Coder→Explainer 一次性执行，可视化代码自动执行并产出图片
+        
+        # 导入 Planner 模块
         try:
             from src.planner import PlannerWorkflow
         except Exception as e:
@@ -1251,110 +1251,206 @@ def visualization_command_node(state: AstroAgentState) -> Command[AstroAgentStat
             updated_state["execution_history"] = execution_history
             return Command(update=updated_state, goto="__end__")
 
-        planner = PlannerWorkflow()
-        pipeline_result = planner.run_complete_pipeline(
-            user_request=user_input,
-            session_id=state.get("session_id"),
-            explanation_type="detailed"
-        )
-
-        # 失败路径：返回清晰的错误与建议
-        if not pipeline_result.get("success"):
-            error_msg = pipeline_result.get("error", "未知错误")
-            error_type = pipeline_result.get("error_type", "unknown")
+        # 初始化多轮对话状态
+        if not state.get("visualization_session_id"):
+            # 阶段1：创建交互式会话
+            print("🔄 初始化可视化需求分析会话...")
+            planner = PlannerWorkflow()
+            
+            # 创建会话
+            session = planner.run_interactive_session(user_input)
+            if not session["success"]:
+                updated_state = state.copy()
+                updated_state["current_step"] = "visualization_failed"
+                updated_state["is_complete"] = True
+                updated_state["task_type"] = "visualization"
+                updated_state["final_answer"] = (
+                    f"❌ 可视化会话创建失败：{session.get('error')}\n\n"
+                    "请检查 Planner 模块配置或稍后重试。"
+                )
+                return Command(update=updated_state, goto="__end__")
+            
+            session_id = session["session_id"]
+            print(f"✅ 可视化会话创建成功: {session_id}")
+            
+            # 处理初始需求
+            print("🔄 处理初始可视化需求...")
+            result = planner.continue_interactive_session(session_id, user_input)
+            
+            if not result["success"]:
+                updated_state = state.copy()
+                updated_state["current_step"] = "visualization_failed"
+                updated_state["is_complete"] = True
+                updated_state["task_type"] = "visualization"
+                updated_state["final_answer"] = (
+                    f"❌ 初始需求处理失败：{result.get('error')}\n\n"
+                    "请重新描述您的可视化需求。"
+                )
+                return Command(update=updated_state, goto="__end__")
+            
+            # 保存会话状态并返回澄清问题
+            updated_state = state.copy()
+            updated_state["visualization_session_id"] = session_id
+            updated_state["visualization_dialogue_state"] = "started"
+            updated_state["visualization_turn_count"] = 1
+            updated_state["visualization_max_turns"] = 8
+            updated_state["visualization_dialogue_history"] = []
+            updated_state["task_type"] = "visualization"
+            
+            # 显示系统回复
+            if result.get("assistant_response"):
+                print(f"\n🤖 系统回复:")
+                print(f"   {result['assistant_response']}")
+                updated_state["visualization_dialogue_history"].append({
+                    "turn": 1,
+                    "user_input": user_input,
+                    "assistant_response": result["assistant_response"],
+                    "timestamp": time.time()
+                })
+            
+            # 显示当前状态
+            if result.get("current_status"):
+                status = result["current_status"]
+                print(f"\n📊 当前状态:")
+                print(f"   对话轮次: {status.get('current_turn', 0)}/{status.get('max_turns', 10)}")
+                print(f"   状态: {status.get('dialogue_status', 'unknown')}")
+                
+                if status.get("task_steps"):
+                    print(f"   已规划任务: {len(status['task_steps'])}个")
+                    for i, step in enumerate(status['task_steps'][:3], 1):
+                        print(f"     {i}. {step.get('description', 'N/A')}")
+                
+                if status.get("selected_dataset"):
+                    print(f"   选定数据集: {status['selected_dataset'].get('name', 'unknown')}")
+            
+            # 检查是否需要确认
+            if result.get("needs_confirmation"):
+                print(f"\n❓ 系统需要确认:")
+                print(f"   {result['confirmation_request']}")
+                updated_state["awaiting_user_choice"] = True
+                updated_state["current_visualization_request"] = result["confirmation_request"]
+                updated_state["current_step"] = "visualization_clarifying"
+                return Command(update=updated_state, goto="__end__")
+            
+            # 检查是否已完成
+            if result.get("completed"):
+                print("\n🎉 需求规划已完成!")
+                # 直接执行 Pipeline
+                return _execute_visualization_pipeline(updated_state, planner, session_id, result)
+            
+            # 需要继续澄清 - 返回等待用户输入的状态
+            updated_state["awaiting_user_choice"] = True
+            updated_state["current_visualization_request"] = "请继续提供更多细节来完善您的可视化需求"
+            updated_state["current_step"] = "visualization_clarifying"
+            updated_state["visualization_dialogue_state"] = "clarifying"
+            
+            return Command(update=updated_state, goto="__end__")
+        
+        # 阶段2：继续多轮对话
+        elif state.get("awaiting_user_choice") and state.get("visualization_dialogue_state") == "clarifying":
+            session_id = state["visualization_session_id"]
+            turn_count = state.get("visualization_turn_count", 1)
+            max_turns = state.get("visualization_max_turns", 8)
+            
+            # 检查是否超过最大轮次
+            if turn_count >= max_turns:
+                print(f"\n⚠️ 已达到最大对话轮次限制 ({max_turns}轮)")
+                print("🔄 自动完成需求规划并执行Pipeline...")
+                planner = PlannerWorkflow()
+                return _execute_visualization_pipeline(state, planner, session_id, None)
+            
+            # 处理特殊命令
+            if user_input.lower() in ['done', '完成', '确认', '执行']:
+                print("✅ 用户确认需求完成")
+                planner = PlannerWorkflow()
+                return _execute_visualization_pipeline(state, planner, session_id, None)
+            
+            if user_input.lower() in ['quit', 'exit', '退出', 'q', '取消']:
+                print("👋 用户退出可视化对话")
+                updated_state = state.copy()
+                updated_state["current_step"] = "visualization_cancelled"
+                updated_state["is_complete"] = True
+                updated_state["task_type"] = "visualization"
+                updated_state["final_answer"] = "可视化需求分析已取消。"
+                return Command(update=updated_state, goto="__end__")
+            
+            print(f"\n👤 用户 (第{turn_count}轮): {user_input}")
+            
+            # 继续会话
+            planner = PlannerWorkflow()
+            result = planner.continue_interactive_session(session_id, user_input)
+            
+            if not result["success"]:
+                print(f"❌ 对话失败: {result.get('error')}")
+                updated_state = state.copy()
+                updated_state["current_step"] = "visualization_failed"
+                updated_state["is_complete"] = True
+                updated_state["task_type"] = "visualization"
+                updated_state["final_answer"] = f"可视化对话失败：{result.get('error')}"
+                return Command(update=updated_state, goto="__end__")
+            
+            # 更新对话历史
+            dialogue_history = state.get("visualization_dialogue_history", [])
+            dialogue_history.append({
+                "turn": turn_count,
+                "user_input": user_input,
+                "assistant_response": result.get("assistant_response", ""),
+                "timestamp": time.time()
+            })
+            
+            # 显示系统回复
+            if result.get("assistant_response"):
+                print(f"\n🤖 系统回复:")
+                print(f"   {result['assistant_response']}")
+            
+            # 显示当前状态
+            if result.get("current_status"):
+                status = result["current_status"]
+                print(f"\n📊 当前状态:")
+                print(f"   对话轮次: {status.get('current_turn', 0)}/{status.get('max_turns', 10)}")
+                print(f"   状态: {status.get('dialogue_status', 'unknown')}")
+                
+                if status.get("task_steps"):
+                    print(f"   已规划任务: {len(status['task_steps'])}个")
+                    for i, step in enumerate(status['task_steps'][:3], 1):
+                        print(f"     {i}. {step.get('description', 'N/A')}")
+                
+                if status.get("selected_dataset"):
+                    print(f"   选定数据集: {status['selected_dataset'].get('name', 'unknown')}")
+            
+            updated_state = state.copy()
+            updated_state["visualization_turn_count"] = turn_count + 1
+            updated_state["visualization_dialogue_history"] = dialogue_history
+            
+            # 检查是否需要确认
+            if result.get("needs_confirmation"):
+                print(f"\n❓ 系统需要确认:")
+                print(f"   {result['confirmation_request']}")
+                updated_state["awaiting_user_choice"] = True
+                updated_state["current_visualization_request"] = result["confirmation_request"]
+                updated_state["current_step"] = "visualization_clarifying"
+                return Command(update=updated_state, goto="__end__")
+            
+            # 检查是否已完成
+            if result.get("completed"):
+                print("\n🎉 需求规划已完成!")
+                return _execute_visualization_pipeline(updated_state, planner, session_id, result)
+            
+            # 继续澄清
+            updated_state["awaiting_user_choice"] = True
+            updated_state["current_visualization_request"] = "请继续提供更多细节来完善您的可视化需求"
+            updated_state["current_step"] = "visualization_clarifying"
+            
+            return Command(update=updated_state, goto="__end__")
+        
+        else:
+            # 异常状态，重置
             updated_state = state.copy()
             updated_state["current_step"] = "visualization_failed"
             updated_state["is_complete"] = True
             updated_state["task_type"] = "visualization"
-            updated_state["final_answer"] = (
-                f"❌ 可视化流程失败 ({error_type})\n\n"
-                f"请求：{user_input}\n"
-                f"错误信息：{error_msg}\n\n"
-                "建议：\n- 确认 conf.yaml 中模型/密钥配置\n"
-                "- 确保 output/ 目录可写\n- 重新尝试简化的可视化需求\n"
-            )
-            # 记录历史
-            execution_history = updated_state.get("execution_history", [])
-            execution_history.append({
-                "node": "visualization_command_node",
-                "action": "pipeline_failed",
-                "input": user_input,
-                "output": error_msg,
-                "timestamp": time.time(),
-                "details": {"error_type": error_type}
-            })
-            updated_state["execution_history"] = execution_history
+            updated_state["final_answer"] = "可视化对话状态异常，请重新开始。"
             return Command(update=updated_state, goto="__end__")
-
-        # 成功路径：组装结果
-        coder_result = pipeline_result.get("coder_result", {})
-        explainer_result = pipeline_result.get("explainer_result", {})
-
-        generated_code = (
-            coder_result.get("code") or
-            coder_result.get("generated_code") or
-            ""
-        )
-        generated_files = (
-            pipeline_result.get("generated_files") or
-            coder_result.get("generated_files") or
-            []
-        )
-        stdout_text = str(coder_result.get("output", "")).strip()
-        stderr_text = str(coder_result.get("error", "")).strip()
-
-        # 构建 final_answer（包含文件列表、stdout/stderr 摘要与解释总结）
-        files_section = "无生成文件" if not generated_files else "\n".join([f"- {p}" for p in generated_files])
-        stdout_section = stdout_text[:1200] if stdout_text else "(无输出)"
-        stderr_section = stderr_text[:1200] if stderr_text else "(无错误)"
-
-        explain_summary = ""
-        if explainer_result.get("success"):
-            summary = explainer_result.get("summary", "")
-            insights = explainer_result.get("insights", [])
-            top_insight = (insights[0] if insights else "")
-            explain_summary = (
-                (f"\n\n📝 结果解释摘要：\n{summary}" if summary else "") +
-                (f"\n🔍 关键洞察：{top_insight}" if top_insight else "")
-            )
-
-        final_answer = (
-            "🎉 可视化流程完成！\n\n"
-            f"请求：{user_input}\n"
-            f"生成文件（{len(generated_files)}）：\n{files_section}\n\n"
-            "—— 执行输出（stdout） ——\n"
-            f"{stdout_section}\n\n"
-            "—— 错误信息（stderr） ——\n"
-            f"{stderr_section}"
-            f"{explain_summary}"
-        )
-
-        # 更新状态
-        updated_state = state.copy()
-        updated_state["current_step"] = "visualization_completed"
-        updated_state["is_complete"] = True
-        updated_state["task_type"] = "visualization"
-        updated_state["generated_code"] = generated_code
-        if generated_files:
-            updated_state["generated_files"] = generated_files
-        updated_state["final_answer"] = final_answer
-
-        # 记录执行历史：plan → code → explain
-        execution_history = updated_state.get("execution_history", [])
-        execution_history.append({
-            "node": "visualization_command_node",
-            "action": "planner_coder_explainer_pipeline",
-            "input": user_input,
-            "output": f"files={len(generated_files)}; stdout={len(stdout_text)}; stderr={len(stderr_text)}",
-            "timestamp": time.time(),
-            "details": {
-                "planner_steps": len(pipeline_result.get("task_steps", [])),
-                "execution_time_total": pipeline_result.get("total_processing_time")
-            }
-        })
-        updated_state["execution_history"] = execution_history
-
-        return Command(update=updated_state, goto="__end__")
 
     except Exception as e:
         # 错误处理
@@ -1371,6 +1467,141 @@ def visualization_command_node(state: AstroAgentState) -> Command[AstroAgentStat
         error_state["is_complete"] = True
         error_state["task_type"] = "visualization"
         return Command(update=error_state, goto="__end__")
+
+
+def _execute_visualization_pipeline(state: AstroAgentState, planner, session_id: str, result=None) -> Command[AstroAgentState]:
+    """执行完整的可视化 Pipeline"""
+    try:
+        print("\n🔄 执行完整可视化Pipeline...")
+        
+        # 获取最终需求
+        if result and result.get("final_result"):
+            final_request = result["final_result"].final_prompt or result["final_result"].user_initial_request
+        else:
+            final_request = state["user_input"]
+        
+        # 执行完整 Pipeline
+        pipeline_result = planner.run_complete_pipeline(
+            user_request=final_request,
+            session_id=session_id,
+            explanation_type="detailed"
+        )
+        
+        # 失败路径：返回清晰的错误与建议
+        if not pipeline_result.get("success"):
+            error_msg = pipeline_result.get("error", "未知错误")
+            error_type = pipeline_result.get("error_type", "unknown")
+            updated_state = state.copy()
+            updated_state["current_step"] = "visualization_failed"
+            updated_state["is_complete"] = True
+            updated_state["task_type"] = "visualization"
+            updated_state["final_answer"] = (
+                f"❌ 可视化Pipeline执行失败 ({error_type})\n\n"
+                f"请求：{final_request}\n"
+                f"错误信息：{error_msg}\n\n"
+                "建议：\n- 确认 conf.yaml 中模型/密钥配置\n"
+                "- 确保 output/ 目录可写\n- 重新尝试简化的可视化需求\n"
+            )
+            return Command(update=updated_state, goto="__end__")
+        
+        # 成功路径：组装结果
+        coder_result = pipeline_result.get("coder_result", {})
+        explainer_result = pipeline_result.get("explainer_result", {})
+        
+        generated_code = (
+            coder_result.get("code") or
+            coder_result.get("generated_code") or
+            ""
+        )
+        generated_files = (
+            pipeline_result.get("generated_files") or
+            coder_result.get("generated_files") or
+            []
+        )
+        stdout_text = str(coder_result.get("output", "")).strip()
+        stderr_text = str(coder_result.get("error", "")).strip()
+        
+        # 构建 final_answer（包含文件列表、stdout/stderr 摘要与解释总结）
+        files_section = "无生成文件" if not generated_files else "\n".join([f"- {p}" for p in generated_files])
+        stdout_section = stdout_text[:1200] if stdout_text else "(无输出)"
+        stderr_section = stderr_text[:1200] if stderr_text else "(无错误)"
+        
+        explain_summary = ""
+        if explainer_result.get("success"):
+            summary = explainer_result.get("summary", "")
+            insights = explainer_result.get("insights", [])
+            top_insight = (insights[0] if insights else "")
+            explain_summary = (
+                (f"\n\n📝 结果解释摘要：\n{summary}" if summary else "") +
+                (f"\n🔍 关键洞察：{top_insight}" if top_insight else "")
+            )
+        
+        # 添加对话历史到最终结果
+        dialogue_summary = ""
+        dialogue_history = state.get("visualization_dialogue_history", [])
+        if dialogue_history:
+            dialogue_summary = "\n\n💬 需求澄清过程：\n"
+            for i, turn in enumerate(dialogue_history, 1):
+                dialogue_summary += f"第{i}轮: {turn['user_input']}\n"
+                dialogue_summary += f"系统回复: {turn['assistant_response'][:200]}...\n\n"
+        
+        final_answer = (
+            "🎉 可视化流程完成！\n\n"
+            f"请求：{final_request}\n"
+            f"生成文件（{len(generated_files)}）：\n{files_section}\n\n"
+            "—— 执行输出（stdout） ——\n"
+            f"{stdout_section}\n\n"
+            "—— 错误信息（stderr） ——\n"
+            f"{stderr_section}"
+            f"{explain_summary}"
+            f"{dialogue_summary}"
+        )
+        
+        # 更新状态
+        updated_state = state.copy()
+        updated_state["current_step"] = "visualization_completed"
+        updated_state["is_complete"] = True
+        updated_state["task_type"] = "visualization"
+        updated_state["generated_code"] = generated_code
+        if generated_files:
+            updated_state["generated_files"] = generated_files
+        updated_state["final_answer"] = final_answer
+        updated_state["visualization_dialogue_state"] = "completed"
+        updated_state["awaiting_user_choice"] = False
+        
+        # 记录执行历史：plan → code → explain
+        execution_history = updated_state.get("execution_history", [])
+        execution_history.append({
+            "node": "visualization_command_node",
+            "action": "multi_turn_pipeline_completed",
+            "input": final_request,
+            "output": f"files={len(generated_files)}; stdout={len(stdout_text)}; stderr={len(stderr_text)}; turns={len(dialogue_history)}",
+            "timestamp": time.time(),
+            "details": {
+                "planner_steps": len(pipeline_result.get("task_steps", [])),
+                "execution_time_total": pipeline_result.get("total_processing_time"),
+                "dialogue_turns": len(dialogue_history),
+                "session_id": session_id
+            }
+        })
+        updated_state["execution_history"] = execution_history
+        
+        print("✅ 可视化Pipeline执行成功!")
+        print(f"📁 生成文件: {len(generated_files)}个")
+        print(f"🔍 解释数量: {len(pipeline_result.get('explanations', []))}个")
+        print(f"💬 对话轮次: {len(dialogue_history)}轮")
+        
+        return Command(update=updated_state, goto="__end__")
+        
+    except Exception as e:
+        # Pipeline执行错误
+        updated_state = state.copy()
+        updated_state["current_step"] = "visualization_failed"
+        updated_state["is_complete"] = True
+        updated_state["task_type"] = "visualization"
+        updated_state["final_answer"] = f"Pipeline执行失败：{str(e)}"
+        updated_state["visualization_dialogue_state"] = "failed"
+        return Command(update=updated_state, goto="__end__")
 
 
 @track_node_execution("multimark")

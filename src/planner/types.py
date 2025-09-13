@@ -13,7 +13,7 @@ class DialogueStatus(Enum):
     COLLECTING = "collecting"     # 需求收集中
     CLARIFYING = "clarifying"     # 需求澄清中
     CONFIRMING = "confirming"     # 需求确认中
-    COMPLETED = "completed"       # 对话完成
+    COMPLETED = "completed"       # 
     CANCELLED = "cancelled"       # 用户取消
 
 

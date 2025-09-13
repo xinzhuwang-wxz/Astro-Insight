@@ -166,6 +166,175 @@ class AstroWorkflow:
                 return error_state
             raise
 
+    def _continue_visualization_dialogue(
+        self,
+        current_state: AstroAgentState,
+        user_choice: str,
+        session_id: str,
+        start_time: float
+    ) -> AstroAgentState:
+        """继续可视化多轮对话"""
+        
+        try:
+            # 导入 Planner 模块
+            from src.planner import PlannerWorkflow
+            
+            # 获取可视化会话ID
+            viz_session_id = current_state.get("visualization_session_id")
+            if not viz_session_id:
+                raise ValueError("可视化会话ID不存在")
+            
+            # 创建 Planner 实例
+            planner = PlannerWorkflow()
+            
+            # 继续可视化对话
+            result = planner.continue_interactive_session(viz_session_id, user_choice)
+            
+            if not result["success"]:
+                # 处理失败情况
+                updated_state = current_state.copy()
+                updated_state["current_step"] = "visualization_failed"
+                updated_state["is_complete"] = True
+                updated_state["final_answer"] = f"可视化对话失败：{result.get('error')}"
+                updated_state["awaiting_user_choice"] = False
+                return updated_state
+            
+            # 更新状态
+            updated_state = current_state.copy()
+            updated_state["awaiting_user_choice"] = False
+            
+            # 更新对话历史
+            if result.get("assistant_response"):
+                dialogue_history = updated_state.get("visualization_dialogue_history", [])
+                dialogue_history.append({
+                    "turn": result.get("current_turn", 1),
+                    "user_input": user_choice,
+                    "assistant_response": result["assistant_response"],
+                    "timestamp": time.time()
+                })
+                updated_state["visualization_dialogue_history"] = dialogue_history
+            
+            # 更新对话轮次
+            if result.get("current_turn"):
+                updated_state["visualization_turn_count"] = result["current_turn"]
+            
+            # 检查是否需要确认
+            if result.get("needs_confirmation"):
+                updated_state["awaiting_user_choice"] = True
+                updated_state["current_visualization_request"] = result["confirmation_request"]
+                updated_state["current_step"] = "visualization_clarifying"
+                return updated_state
+            
+            # 检查是否已完成
+            if result.get("completed"):
+                # 执行完整 Pipeline
+                from src.graph.nodes import _execute_visualization_pipeline
+                return _execute_visualization_pipeline(updated_state, planner, viz_session_id, result)
+            
+            # 继续澄清
+            updated_state["awaiting_user_choice"] = True
+            updated_state["current_visualization_request"] = "请继续提供更多细节来完善您的可视化需求"
+            updated_state["current_step"] = "visualization_clarifying"
+            updated_state["visualization_dialogue_state"] = "clarifying"
+            
+            # 更新会话状态
+            self.sessions[session_id]["current_state"] = updated_state
+            self.sessions[session_id]["last_updated"] = datetime.now()
+            
+            # 记录执行时间
+            execution_time = time.time() - start_time
+            logger.info(f"可视化对话继续完成 - 耗时: {execution_time:.2f}秒")
+            
+            return updated_state
+            
+        except Exception as e:
+            logger.error(f"可视化对话继续失败: {str(e)}")
+            # 返回错误状态
+            updated_state = current_state.copy()
+            updated_state["current_step"] = "visualization_failed"
+            updated_state["is_complete"] = True
+            updated_state["final_answer"] = f"可视化对话继续失败：{str(e)}"
+            updated_state["awaiting_user_choice"] = False
+            return updated_state
+
+    def handle_visualization_confirmation(
+        self,
+        session_id: str,
+        confirmation_input: str,
+    ) -> AstroAgentState:
+        """处理可视化需求确认并执行完整Pipeline"""
+        
+        start_time = time.time()
+        logger.info(f"处理可视化确认 - 会话: {session_id}, 确认: {confirmation_input}")
+        
+        try:
+            # 获取现有会话
+            if session_id not in self.sessions:
+                raise ValueError(f"会话不存在: {session_id}")
+                
+            session = self.sessions[session_id]
+            current_state = session["current_state"].copy()
+            
+            # 获取可视化会话ID
+            viz_session_id = current_state.get("visualization_session_id")
+            if not viz_session_id:
+                raise ValueError("可视化会话ID不存在")
+            
+            # 导入 Planner 模块
+            from src.planner import PlannerWorkflow
+            
+            # 创建 Planner 实例
+            planner = PlannerWorkflow()
+            
+            # 处理确认
+            confirmation_result = planner.handle_confirmation(viz_session_id, confirmation_input)
+            
+            if not confirmation_result["success"]:
+                # 处理失败情况
+                updated_state = current_state.copy()
+                updated_state["current_step"] = "visualization_failed"
+                updated_state["is_complete"] = True
+                updated_state["final_answer"] = f"需求确认失败：{confirmation_result.get('error')}"
+                updated_state["awaiting_user_choice"] = False
+                return updated_state
+            
+            # 执行完整 Pipeline
+            from src.graph.nodes import _execute_visualization_pipeline
+            final_command = _execute_visualization_pipeline(current_state, planner, viz_session_id, confirmation_result)
+            
+            # 从Command对象中提取状态
+            if hasattr(final_command, 'update') and final_command.update:
+                final_state = final_command.update
+            else:
+                final_state = current_state.copy()
+                final_state["current_step"] = "visualization_completed"
+                final_state["is_complete"] = True
+                final_state["final_answer"] = "可视化Pipeline执行完成"
+            
+            # 更新会话状态
+            self.sessions[session_id]["current_state"] = final_state
+            self.sessions[session_id]["last_updated"] = datetime.now()
+            
+            # 记录执行时间
+            execution_time = time.time() - start_time
+            logger.info(f"可视化确认处理完成 - 耗时: {execution_time:.2f}秒")
+            
+            return final_state
+            
+        except Exception as e:
+            logger.error(f"可视化确认处理失败: {str(e)}")
+            # 返回错误状态
+            if session_id in self.sessions:
+                error_state = self.sessions[session_id]["current_state"].copy()
+            else:
+                error_state = {}
+            
+            error_state["current_step"] = "visualization_failed"
+            error_state["is_complete"] = True
+            error_state["final_answer"] = f"可视化确认处理失败：{str(e)}"
+            error_state["awaiting_user_choice"] = False
+            return error_state
+
     def continue_workflow(
         self,
         session_id: str,
@@ -191,6 +360,13 @@ class AstroWorkflow:
                 
             session = self.sessions[session_id]
             current_state = session["current_state"].copy()
+            
+            # 检查是否是可视化多轮对话
+            if (current_state.get("task_type") == "visualization" and 
+                current_state.get("visualization_session_id")):
+                
+                # 处理可视化多轮对话
+                return self._continue_visualization_dialogue(current_state, user_choice, session_id, start_time)
             
             # 设置用户选择，但不覆盖原始user_input
             current_state["user_choice"] = user_choice

@@ -129,26 +129,81 @@ def interactive_mode(workflow: AstroWorkflow):
             
             try:
                 result = workflow.execute_workflow(session_id, user_input)
+                
+                # 调试信息 - 在格式化输出之前
+                print(f"\n🔍 执行后调试信息:")
+                print(f"   task_type: {result.get('task_type')}")
+                print(f"   visualization_dialogue_state: {result.get('visualization_dialogue_state')}")
+                print(f"   awaiting_user_choice: {result.get('awaiting_user_choice')}")
+                print(f"   current_step: {result.get('current_step')}")
+                
                 print(format_state_output(result))
                 
-                # 检查是否需要等待用户选择
+                # 检查是否需要等待用户选择（支持多轮对话）
                 while result.get('awaiting_user_choice', False):
-                    print("\n请选择 (是/否): ", end="")
-                    user_choice = input().strip().lower()
-                    
-                    if user_choice in ['是', 'y', 'yes', '1']:
-                        choice_input = "是"
-                    elif user_choice in ['否', 'n', 'no', '0']:
-                        choice_input = "否"
+                    # 检查是否是可视化多轮对话
+                    if (result.get('task_type') == 'visualization' and 
+                        result.get('visualization_dialogue_state') in ['clarifying', 'started']):
+                        # 可视化多轮对话
+                        current_request = result.get('current_visualization_request', '请继续提供更多信息')
+                        print(f"\n💬 {current_request}")
+                        
+                        # 显示对话轮次信息
+                        turn_count = result.get('visualization_turn_count', 1)
+                        max_turns = result.get('visualization_max_turns', 8)
+                        print(f"📊 对话轮次: {turn_count}/{max_turns}")
+                        print("💡 提示: 输入 'done'/'完成' 确认需求，输入 'quit'/'退出' 取消")
+                        
+                        user_response = input("\n🎯 请继续对话: ").strip()
+                        
+                        # 处理特殊命令
+                        if user_response.lower() in ['quit', 'exit', '退出', 'q', '取消']:
+                            print("👋 用户退出可视化对话")
+                            result = workflow.continue_workflow(session_id, user_response)
+                            print(format_state_output(result))
+                            break
+                        
+                        if user_response.lower() in ['done', '完成', '确认', '执行']:
+                            print("✅ 用户确认需求完成")
+                            # 调用确认处理而不是继续对话
+                            result = workflow.handle_visualization_confirmation(session_id, user_response)
+                            print(format_state_output(result))
+                            break
+                        
+                        if not user_response:
+                            print("⚠️ 请输入有效的反馈")
+                            continue
+                        
+                        # 继续可视化对话
+                        print(f"\n🤖 正在处理您的回复...")
+                        result = workflow.continue_workflow(session_id, user_response)
+                        
+                        # 显示助手的回复
+                        if result.get('visualization_dialogue_history'):
+                            latest_dialogue = result['visualization_dialogue_history'][-1]
+                            if latest_dialogue.get('assistant_response'):
+                                print(f"\n🤖 系统回复:")
+                                print(f"   {latest_dialogue['assistant_response']}")
+                        
+                        print(format_state_output(result))
+                        
                     else:
-                        print("请输入有效选择：是/否")
-                        continue
-                    
-                    # 继续执行workflow处理用户选择
-                    print(f"\n🤖 正在处理您的选择...")
-                    # 不传递choice_input作为新的user_input，让workflow内部处理用户选择
-                    result = workflow.continue_workflow(session_id, choice_input)
-                    print(format_state_output(result))
+                        # 原有的简单选择逻辑（用于其他节点）
+                        print("\n请选择 (是/否): ", end="")
+                        user_choice = input().strip().lower()
+                        
+                        if user_choice in ['是', 'y', 'yes', '1']:
+                            choice_input = "是"
+                        elif user_choice in ['否', 'n', 'no', '0']:
+                            choice_input = "否"
+                        else:
+                            print("请输入有效选择：是/否")
+                            continue
+                        
+                        # 继续执行workflow处理用户选择
+                        print(f"\n🤖 正在处理您的选择...")
+                        result = workflow.continue_workflow(session_id, choice_input)
+                        print(format_state_output(result))
                 
                 session_counter += 1
                 
@@ -181,24 +236,71 @@ def single_query_mode(workflow: AstroWorkflow, query: str, session_id: Optional[
         result = workflow.execute_workflow(session_id, query)
         print(format_state_output(result))
         
-        # 检查是否需要等待用户选择
+        # 检查是否需要等待用户选择（支持多轮对话）
         while result.get('awaiting_user_choice', False):
-            print("\n请选择 (是/否): ", end="")
-            user_choice = input().strip().lower()
-            
-            if user_choice in ['是', 'y', 'yes', '1']:
-                choice_input = "是"
-            elif user_choice in ['否', 'n', 'no', '0']:
-                choice_input = "否"
+            # 检查是否是可视化多轮对话
+            if (result.get('task_type') == 'visualization' and 
+                result.get('visualization_dialogue_state') in ['clarifying', 'started']):
+                # 可视化多轮对话
+                current_request = result.get('current_visualization_request', '请继续提供更多信息')
+                print(f"\n💬 {current_request}")
+                
+                # 显示对话轮次信息
+                turn_count = result.get('visualization_turn_count', 1)
+                max_turns = result.get('visualization_max_turns', 8)
+                print(f"📊 对话轮次: {turn_count}/{max_turns}")
+                print("💡 提示: 输入 'done'/'完成' 确认需求，输入 'quit'/'退出' 取消")
+                
+                user_response = input("\n🎯 请继续对话: ").strip()
+                
+                # 处理特殊命令
+                if user_response.lower() in ['quit', 'exit', '退出', 'q', '取消']:
+                    print("👋 用户退出可视化对话")
+                    result = workflow.continue_workflow(session_id, user_response)
+                    print(format_state_output(result))
+                    break
+                
+                if user_response.lower() in ['done', '完成', '确认', '执行']:
+                    print("✅ 用户确认需求完成")
+                    # 调用确认处理而不是继续对话
+                    result = workflow.handle_visualization_confirmation(session_id, user_response)
+                    print(format_state_output(result))
+                    break
+                
+                if not user_response:
+                    print("⚠️ 请输入有效的反馈")
+                    continue
+                
+                # 继续可视化对话
+                print(f"\n🤖 正在处理您的回复...")
+                result = workflow.continue_workflow(session_id, user_response)
+                
+                # 显示助手的回复
+                if result.get('visualization_dialogue_history'):
+                    latest_dialogue = result['visualization_dialogue_history'][-1]
+                    if latest_dialogue.get('assistant_response'):
+                        print(f"\n🤖 系统回复:")
+                        print(f"   {latest_dialogue['assistant_response']}")
+                
+                print(format_state_output(result))
+                
             else:
-                print("请输入有效选择：是/否")
-                continue
-            
-            # 继续执行workflow处理用户选择
-            print(f"\n🤖 正在处理您的选择...")
-            # 不传递choice_input作为新的user_input，让workflow内部处理用户选择
-            result = workflow.continue_workflow(session_id, choice_input)
-            print(format_state_output(result))
+                # 原有的简单选择逻辑（用于其他节点）
+                print("\n请选择 (是/否): ", end="")
+                user_choice = input().strip().lower()
+                
+                if user_choice in ['是', 'y', 'yes', '1']:
+                    choice_input = "是"
+                elif user_choice in ['否', 'n', 'no', '0']:
+                    choice_input = "否"
+                else:
+                    print("请输入有效选择：是/否")
+                    continue
+                
+                # 继续执行workflow处理用户选择
+                print(f"\n🤖 正在处理您的选择...")
+                result = workflow.continue_workflow(session_id, choice_input)
+                print(format_state_output(result))
         
         return result
     except Exception as e:

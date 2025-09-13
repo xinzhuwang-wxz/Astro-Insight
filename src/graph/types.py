@@ -70,9 +70,9 @@ class AstroAgentState(TypedDict):
     user_choice: Optional[str]
 
     # 结果数据
-    qa_response: Annotated[Optional[str], "QA响应内容"]
+    qa_response: Optional[str]  # QA响应内容
     response: Optional[str]  # 对话响应字段
-    final_answer: Annotated[Optional[str], "最终回答内容"]
+    final_answer: Optional[str]  # 最终回答内容
     generated_code: Optional[str]
     execution_result: Optional[Dict[str, Any]]
 
@@ -85,6 +85,14 @@ class AstroAgentState(TypedDict):
     node_history: List[str]  # 节点历史记录
     current_node: Optional[str]  # 当前节点
     timestamp: float
+
+    # 多轮可视化对话相关字段
+    visualization_session_id: Optional[str]  # Planner会话ID
+    visualization_dialogue_state: Optional[Literal["started", "clarifying", "completed", "failed"]]  # 对话状态
+    current_visualization_request: Optional[str]  # 当前澄清问题
+    visualization_turn_count: int  # 对话轮次计数
+    visualization_max_turns: int  # 最大对话轮次
+    visualization_dialogue_history: List[Dict[str, Any]]  # 可视化对话历史
 
 
 def validate_state(state: AstroAgentState) -> tuple[bool, List[str]]:

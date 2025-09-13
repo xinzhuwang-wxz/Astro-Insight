@@ -193,6 +193,18 @@ class StateManager:
         if awaiting_choice:
             parts.append("等待用户选择: 是")
         
+        # 添加可视化对话状态调试信息
+        if state.get("task_type") == "visualization":
+            viz_state = state.get("visualization_dialogue_state")
+            viz_session = state.get("visualization_session_id")
+            viz_turn = state.get("visualization_turn_count", 0)
+            if viz_state:
+                parts.append(f"可视化对话状态: {viz_state}")
+            if viz_session:
+                parts.append(f"可视化会话ID: {viz_session}")
+            if viz_turn > 0:
+                parts.append(f"对话轮次: {viz_turn}")
+        
         return "\n".join(parts)
     
     def _format_results(self, state: Dict[str, Any]) -> str:

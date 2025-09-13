@@ -246,16 +246,30 @@ class PlannerWorkflow:
         # 开始规划会话
         state = self.agent.start_planning_session(user_request, session_id)
         
-        # 保存初始会话状态
+        # 处理初始用户输入
+        state = self.agent.process_user_input(state, user_request)
+        
+        # 保存会话状态
         self.agent.save_session(state)
+        
+        # 获取最新的assistant回复
+        assistant_response = ""
+        if state.dialogue_history:
+            assistant_response = state.dialogue_history[-1].assistant_response
         
         return {
             "success": True,
             "session_id": state.session_id,
-            "initial_state": state,
-            "message": "交互式会话已开始，请继续提供输入",
+            "assistant_response": assistant_response,
             "current_turn": state.current_turn,
-            "max_turns": state.max_turns
+            "max_turns": state.max_turns,
+            "current_status": {
+                "current_turn": state.current_turn,
+                "max_turns": state.max_turns,
+                "dialogue_status": state.dialogue_status.value,
+                "task_steps": [{"description": step.description} for step in state.task_steps] if state.task_steps else [],
+                "selected_dataset": {"name": state.selected_dataset.name} if state.selected_dataset else None
+            }
         }
     
     def continue_interactive_session(
