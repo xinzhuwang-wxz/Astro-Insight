@@ -1,0 +1,663 @@
+{
+  "execution_summary": {
+    "start_time": "2025-09-13T15:21:24.228281",
+    "end_time": null,
+    "duration": null,
+    "total_processes": 2,
+    "successful_processes": 2,
+    "failed_processes": 0,
+    "session_dir": "output\\complete_demo_20250913_152124"
+  },
+  "process_results": {
+    "0": 0,
+    "1": 0
+  },
+  "process_logs": {
+    "0": [
+      {
+        "timestamp": "2025-09-13T15:21:24.334153",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "C:\\Users\\32830\\Desktop\\heckathon\\Astro-Insight\\src\\mcp_ml\\temp_script_process_0.py:29: SyntaxWarning: invalid escape sequence '\\c'",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:24.435652",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "with open('temp_configs\\config1_process_0_20250913_152124.yaml', 'r') as file:",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:31.972040",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "2025-09-13 15:21:31,970 - INFO - Process 0 - 进程 0 开始执行",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.072263",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "2025-09-13 15:21:31,991 - INFO - Process 0 - 进程 0 配置加载完成",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.174844",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "2025-09-13 15:21:31,991 - INFO - Process 0 - 检测到 0 个物理GPU",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.275139",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "2025-09-13 15:21:32,062 - INFO - Process 0 - 进程 0 使用CPU训练",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.375545",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "2025-09-13 15:21:32,062 - INFO - Process 0 - 进程 0 开始数据预处理",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.475890",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "C:\\Users\\32830\\anaconda3\\envs\\deerflow\\Lib\\site-packages\\numpy\\_core\\fromnumeric.py:57: FutureWarning: 'DataFrame.swapaxes' is deprecated and will be removed in a future version. Please use 'DataFrame.transpose' instead.",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.576361",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "return bound(*args, **kwds)",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.676773",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "2025-09-13 15:21:32,346 - INFO - Process 0 - 进程 0 开始模型训练",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.777288",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "C:\\Users\\32830\\anaconda3\\envs\\deerflow\\Lib\\site-packages\\numpy\\_core\\fromnumeric.py:57: FutureWarning: 'DataFrame.swapaxes' is deprecated and will be removed in a future version. Please use 'DataFrame.transpose' instead.",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.879494",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "return bound(*args, **kwds)",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.980288",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "Epoch 1/4",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:33.647597",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:33.806369",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 1s/step - accuracy: 0.7273 - loss: 0.6882",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:33.907207",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "Epoch 1: val_accuracy improved from None to 0.66667, saving model to output\\complete_demo_20250913_152124\\temp\\best_model_process_0_20250913_152124.keras",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.010514",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.112950",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 1s/step - accuracy: 0.7273 - loss: 0.6882 - val_accuracy: 0.6667 - val_loss: 0.6849",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.223847",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "Epoch 2/4",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.324470",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.427915",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 161ms/step - accuracy: 0.5909 - loss: 0.6563",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.528784",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "Epoch 2: val_accuracy did not improve from 0.66667",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.628985",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.729395",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 218ms/step - accuracy: 0.5909 - loss: 0.6563 - val_accuracy: 0.0000e+00 - val_loss: 0.8248",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.829528",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "Epoch 3/4",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.929990",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.030692",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 149ms/step - accuracy: 0.7273 - loss: 0.5934",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.130836",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "Epoch 3: val_accuracy did not improve from 0.66667",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.231099",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.331586",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 207ms/step - accuracy: 0.7273 - loss: 0.5934 - val_accuracy: 0.6667 - val_loss: 0.9841",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.431892",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "Epoch 4/4",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.532136",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.632655",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 149ms/step - accuracy: 0.5909 - loss: 0.6123",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.737868",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "Epoch 4: val_accuracy did not improve from 0.66667",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.841714",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.942249",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 206ms/step - accuracy: 0.5909 - loss: 0.6123 - val_accuracy: 0.3333 - val_loss: 0.8538",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.042756",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "2025-09-13 15:21:34,588 - INFO - Process 0 - 进程 0 开始模型评估",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.143124",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "2025-09-13 15:21:35,294 - INFO - Process 0 - 图片文件已保存: output\\complete_demo_20250913_152124\\images\\training_history_process_0_tmpn_tmx405.png",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.244574",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "Model training complete.",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.344802",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.445049",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 50ms/step",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.545561",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 59ms/step",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.645990",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "2025-09-13 15:21:35,657 - INFO - Process 0 - 图片文件已保存: output\\complete_demo_20250913_152124\\images\\confusion_matrix_process_0_tmp67sq6b67.png",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.746363",
+        "process_id": 0,
+        "pid": 25640,
+        "message": "2025-09-13 15:21:35,673 - INFO - Process 0 - 进程 0 执行完成",
+        "type": "stdout"
+      }
+    ],
+    "1": [
+      {
+        "timestamp": "2025-09-13T15:21:24.346547",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "C:\\Users\\32830\\Desktop\\heckathon\\Astro-Insight\\src\\mcp_ml\\temp_script_process_1.py:29: SyntaxWarning: invalid escape sequence '\\c'",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:24.447096",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "with open('temp_configs\\config2_process_1_20250913_152124.yaml', 'r') as file:",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:31.964394",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "2025-09-13 15:21:31,964 - INFO - Process 1 - 进程 1 开始执行",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.065247",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "2025-09-13 15:21:31,986 - INFO - Process 1 - 进程 1 配置加载完成",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.167826",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "2025-09-13 15:21:31,986 - INFO - Process 1 - 检测到 0 个物理GPU",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.269959",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "2025-09-13 15:21:32,062 - INFO - Process 1 - 进程 1 使用CPU训练",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.370406",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "2025-09-13 15:21:32,062 - INFO - Process 1 - 进程 1 开始数据预处理",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.470663",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "C:\\Users\\32830\\anaconda3\\envs\\deerflow\\Lib\\site-packages\\numpy\\_core\\fromnumeric.py:57: FutureWarning: 'DataFrame.swapaxes' is deprecated and will be removed in a future version. Please use 'DataFrame.transpose' instead.",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.571301",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "return bound(*args, **kwds)",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.671636",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "2025-09-13 15:21:32,339 - INFO - Process 1 - 进程 1 开始模型训练",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.771850",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "C:\\Users\\32830\\anaconda3\\envs\\deerflow\\Lib\\site-packages\\numpy\\_core\\fromnumeric.py:57: FutureWarning: 'DataFrame.swapaxes' is deprecated and will be removed in a future version. Please use 'DataFrame.transpose' instead.",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.871968",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "return bound(*args, **kwds)",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:32.972630",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "Epoch 1/4",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:33.567944",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:33.790622",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 1s/step - accuracy: 0.5455 - loss: 0.6920",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:33.890829",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "Epoch 1: val_accuracy improved from None to 1.00000, saving model to output\\complete_demo_20250913_152124\\temp\\best_model_process_1_20250913_152124.keras",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:33.991278",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.092702",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 1s/step - accuracy: 0.5455 - loss: 0.6920 - val_accuracy: 1.0000 - val_loss: 0.6637",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.193053",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "Epoch 2/4",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.296548",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.401775",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 135ms/step - accuracy: 0.7273 - loss: 0.6531",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.503873",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "Epoch 2: val_accuracy did not improve from 1.00000",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.605378",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.705785",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 212ms/step - accuracy: 0.7273 - loss: 0.6531 - val_accuracy: 0.6667 - val_loss: 0.6021",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.806167",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "Epoch 3/4",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:34.906364",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.006889",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 99ms/step - accuracy: 0.7273 - loss: 0.6044",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.107489",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "Epoch 3: val_accuracy did not improve from 1.00000",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.207955",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.308350",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 196ms/step - accuracy: 0.7273 - loss: 0.6044 - val_accuracy: 0.6667 - val_loss: 0.5883",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.408686",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "Epoch 4/4",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.509105",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.609449",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 101ms/step - accuracy: 0.4545 - loss: 0.8346",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.710124",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "Epoch 4: val_accuracy did not improve from 1.00000",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.810684",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:35.911232",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 205ms/step - accuracy: 0.4545 - loss: 0.8346 - val_accuracy: 0.6667 - val_loss: 0.6062",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.011690",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "2025-09-13 15:21:34,550 - INFO - Process 1 - 进程 1 开始模型评估",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.112215",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "2025-09-13 15:21:35,213 - INFO - Process 1 - 图片文件已保存: output\\complete_demo_20250913_152124\\images\\training_history_process_1_tmptym2775x.png",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.212517",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "Model training complete.",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.312997",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.413566",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 55ms/step",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.514196",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 63ms/step",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.617263",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "2025-09-13 15:21:35,602 - INFO - Process 1 - 图片文件已保存: output\\complete_demo_20250913_152124\\images\\confusion_matrix_process_1_tmp5trnaan3.png",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.718120",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "2025-09-13 15:21:35,616 - INFO - Process 1 - 进程 1 执行完成",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T15:21:36.919108",
+        "process_id": 1,
+        "pid": 44752,
+        "message": "进程结束，返回码: 0",
+        "type": "process_end",
+        "return_code": 0
+      }
+    ]
+  },
+  "gpu_status": {
+    "total_gpus": 0,
+    "gpu_info": []
+  },
+  "session_info": {
+    "session_id": "complete_demo_20250913_152124",
+    "session_dir": "output\\complete_demo_20250913_152124",
+    "subdirs": {
+      "models": "output\\complete_demo_20250913_152124\\models",
+      "logs": "output\\complete_demo_20250913_152124\\logs",
+      "images": "output\\complete_demo_20250913_152124\\images",
+      "configs": "output\\complete_demo_20250913_152124\\configs",
+      "results": "output\\complete_demo_20250913_152124\\results",
+      "temp": "output\\complete_demo_20250913_152124\\temp"
+    },
+    "created_at": "2025-09-13T15:21:36.935958"
+  },
+  "log_file": "output\\complete_demo_20250913_152124\\logs\\execution_log.json"
+}

@@ -45,17 +45,9 @@ class MCPMLClient:
             
             logger.info(f"启动MCP ML服务器: {self.server_path}")
             
-            # 启动MCP服务器子进程（使用虚拟环境）
-            if os.name == 'nt':  # Windows
-                python_exe = str(self.server_path / ".venv" / "Scripts" / "python.exe")
-            else:  # Unix/Linux
-                python_exe = str(self.server_path / ".venv" / "bin" / "python")
-            
-            # 检查虚拟环境是否存在
-            if not os.path.exists(python_exe):
-                # 回退到系统Python
-                python_exe = 'python'
-                logger.warning("虚拟环境不存在，使用系统Python")
+            # 启动MCP服务器子进程（使用当前conda环境）
+            python_exe = 'python'
+            logger.info("使用当前conda环境的Python")
             
             self.server_process = subprocess.Popen(
                 [python_exe, 'server.py'],
