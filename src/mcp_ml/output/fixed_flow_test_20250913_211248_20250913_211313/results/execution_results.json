@@ -1,0 +1,89 @@
+{
+  "execution_summary": {
+    "start_time": "2025-09-13T21:13:13.192183",
+    "end_time": null,
+    "duration": null,
+    "total_processes": 2,
+    "successful_processes": 0,
+    "failed_processes": 2,
+    "session_dir": "output\\fixed_flow_test_20250913_211248_20250913_211313"
+  },
+  "process_results": {
+    "0": 1,
+    "1": 1
+  },
+  "process_logs": {
+    "0": [
+      {
+        "timestamp": "2025-09-13T21:13:20.481827",
+        "process_id": 0,
+        "pid": 46308,
+        "message": "2025-09-13 21:13:20,481 - INFO - Process 0 - 进程 0 开始执行",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:13:20.582384",
+        "process_id": 0,
+        "pid": 46308,
+        "message": "2025-09-13 21:13:20,481 - ERROR - Process 0 - 进程 0 执行失败: unacceptable character #x000c: special characters are not allowed",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:13:20.683226",
+        "process_id": 0,
+        "pid": 46308,
+        "message": "in \"temp_configs\\generated_config_1_process_0_20250913_211313.yaml\", position 1499",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:13:21.593637",
+        "process_id": 0,
+        "pid": 46308,
+        "message": "进程结束，返回码: 1",
+        "type": "process_end",
+        "return_code": 1
+      }
+    ],
+    "1": [
+      {
+        "timestamp": "2025-09-13T21:13:20.584765",
+        "process_id": 1,
+        "pid": 55380,
+        "message": "2025-09-13 21:13:20,584 - INFO - Process 1 - 进程 1 开始执行",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:13:20.686053",
+        "process_id": 1,
+        "pid": 55380,
+        "message": "2025-09-13 21:13:20,603 - ERROR - Process 1 - 进程 1 执行失败: unacceptable character #x000c: special characters are not allowed",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:13:20.788784",
+        "process_id": 1,
+        "pid": 55380,
+        "message": "in \"temp_configs\\generated_config_2_process_1_20250913_211313.yaml\", position 1503",
+        "type": "stdout"
+      }
+    ]
+  },
+  "gpu_status": {
+    "total_gpus": 0,
+    "gpu_info": []
+  },
+  "session_info": {
+    "session_id": "fixed_flow_test_20250913_211248_20250913_211313",
+    "session_dir": "output\\fixed_flow_test_20250913_211248_20250913_211313",
+    "subdirs": {
+      "models": "output\\fixed_flow_test_20250913_211248_20250913_211313\\models",
+      "logs": "output\\fixed_flow_test_20250913_211248_20250913_211313\\logs",
+      "images": "output\\fixed_flow_test_20250913_211248_20250913_211313\\images",
+      "configs": "output\\fixed_flow_test_20250913_211248_20250913_211313\\configs",
+      "results": "output\\fixed_flow_test_20250913_211248_20250913_211313\\results",
+      "temp": "output\\fixed_flow_test_20250913_211248_20250913_211313\\temp"
+    },
+    "created_at": "2025-09-13T21:13:21.644766"
+  },
+  "log_file": "output\\fixed_flow_test_20250913_211248_20250913_211313\\logs\\execution_log.json"
+}

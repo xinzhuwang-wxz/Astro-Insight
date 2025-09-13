@@ -1,0 +1,36 @@
+{
+  "session_info": {
+    "session_id": "config_generation_test_20250913_211734_20250913_211754",
+    "session_dir": "output\\config_generation_test_20250913_211734_20250913_211754",
+    "subdirs": {
+      "models": "output\\config_generation_test_20250913_211734_20250913_211754\\models",
+      "logs": "output\\config_generation_test_20250913_211734_20250913_211754\\logs",
+      "images": "output\\config_generation_test_20250913_211734_20250913_211754\\images",
+      "configs": "output\\config_generation_test_20250913_211734_20250913_211754\\configs",
+      "results": "output\\config_generation_test_20250913_211734_20250913_211754\\results",
+      "temp": "output\\config_generation_test_20250913_211734_20250913_211754\\temp"
+    },
+    "created_at": "2025-09-13T21:18:13.403493"
+  },
+  "files": {
+    "models": [],
+    "logs": [
+      {
+        "name": "execution_log.json",
+        "size": 27,
+        "size_mb": 0.0
+      }
+    ],
+    "images": [],
+    "configs": [],
+    "results": [
+      {
+        "name": "execution_results.json",
+        "size": 15418,
+        "size_mb": 0.01
+      }
+    ],
+    "temp": []
+  },
+  "created_at": "2025-09-13T21:18:13.405611"
+}

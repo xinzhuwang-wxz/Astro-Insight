@@ -1,0 +1,390 @@
+{
+  "execution_summary": {
+    "start_time": "2025-09-13T21:19:05.439522",
+    "end_time": null,
+    "duration": null,
+    "total_processes": 2,
+    "successful_processes": 2,
+    "failed_processes": 0,
+    "session_dir": "output\\final_fix_test_20250913_211850_20250913_211905"
+  },
+  "process_results": {
+    "0": 0,
+    "1": 0
+  },
+  "process_logs": {
+    "0": [
+      {
+        "timestamp": "2025-09-13T21:19:12.448632",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "2025-09-13 21:19:12,448 - INFO - Process 0 - 进程 0 开始执行",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:12.549748",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "2025-09-13 21:19:12,465 - INFO - Process 0 - 进程 0 配置加载完成",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:12.650356",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "2025-09-13 21:19:12,465 - INFO - Process 0 - 检测到 0 个物理GPU",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:12.750574",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "2025-09-13 21:19:12,532 - INFO - Process 0 - 进程 0 开始数据预处理",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:12.851063",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "2025-09-13 21:19:12,774 - INFO - Process 0 - 进程 0 开始模型训练",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:14.830718",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:14.931380",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "\u001b[1m1/8\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m13s\u001b[0m 2s/step - accuracy: 0.5938 - loss: 0.7021",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.031761",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "\u001b[1m2/8\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 96ms/step - accuracy: 0.5625 - loss: 0.7018",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.134308",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "\u001b[1m3/8\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 91ms/step - accuracy: 0.5729 - loss: 0.6910",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.236989",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "\u001b[1m4/8\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 89ms/step - accuracy: 0.5742 - loss: 0.6988",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.338200",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "\u001b[1m5/8\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 87ms/step - accuracy: 0.5756 - loss: 0.7017",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.439138",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "\u001b[1m6/8\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 85ms/step - accuracy: 0.5795 - loss: 0.7025",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.539257",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "\u001b[1m7/8\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 84ms/step - accuracy: 0.5790 - loss: 0.7028",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.639574",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "\u001b[1m8/8\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 80ms/step - accuracy: 0.5782 - loss: 0.7024",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.739821",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "Epoch 1: val_accuracy improved from None to 0.40000, saving model to best_model_process_0_20250913_211905.keras",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.840331",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.941306",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "\u001b[1m8/8\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m3s\u001b[0m 132ms/step - accuracy: 0.5726 - loss: 0.7002 - val_accuracy: 0.4000 - val_loss: 0.7211",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:16.041756",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "2025-09-13 21:19:15,765 - INFO - Process 0 - 进程 0 开始模型评估",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:20.614150",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "Model training complete.",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:20.715431",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:20.815524",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 113ms/step",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:20.916911",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 124ms/step",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:23.442874",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "2025-09-13 21:19:23,442 - INFO - Process 0 - 进程 0 执行完成",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:24.824948",
+        "process_id": 0,
+        "pid": 49588,
+        "message": "进程结束，返回码: 0",
+        "type": "process_end",
+        "return_code": 0
+      }
+    ],
+    "1": [
+      {
+        "timestamp": "2025-09-13T21:19:12.446612",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "2025-09-13 21:19:12,446 - INFO - Process 1 - 进程 1 开始执行",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:12.547661",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "2025-09-13 21:19:12,465 - INFO - Process 1 - 进程 1 配置加载完成",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:12.648264",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "2025-09-13 21:19:12,465 - INFO - Process 1 - 检测到 0 个物理GPU",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:12.748552",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "2025-09-13 21:19:12,532 - INFO - Process 1 - 进程 1 开始数据预处理",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:12.848873",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "2025-09-13 21:19:12,766 - INFO - Process 1 - 进程 1 开始模型训练",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:13.767904",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:13.869211",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m 1/16\u001b[0m \u001b[32m━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m12s\u001b[0m 819ms/step - accuracy: 0.5625 - loss: 0.6817",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:13.975181",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m 2/16\u001b[0m \u001b[32m━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 70ms/step - accuracy: 0.5312 - loss: 0.7193",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:14.077356",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m 3/16\u001b[0m \u001b[32m━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 68ms/step - accuracy: 0.4861 - loss: 0.7292",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:14.177843",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m 4/16\u001b[0m \u001b[32m━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 64ms/step - accuracy: 0.4544 - loss: 0.7362",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:14.278941",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m 6/16\u001b[0m \u001b[32m━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 57ms/step - accuracy: 0.4210 - loss: 0.7362",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:14.379963",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m 8/16\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 52ms/step - accuracy: 0.4116 - loss: 0.7323",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:14.480562",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m10/16\u001b[0m \u001b[32m━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 50ms/step - accuracy: 0.4102 - loss: 0.7292",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:14.581029",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m12/16\u001b[0m \u001b[32m━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━━━\u001b[0m \u001b[1m0s\u001b[0m 48ms/step - accuracy: 0.4178 - loss: 0.7262",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:14.681509",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m14/16\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m━━━\u001b[0m \u001b[1m0s\u001b[0m 47ms/step - accuracy: 0.4282 - loss: 0.7236",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:14.795451",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m16/16\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 44ms/step - accuracy: 0.4381 - loss: 0.7217",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:14.899177",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "Epoch 1: val_accuracy improved from None to 0.60000, saving model to best_model_process_1_20250913_211905.keras",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.017600",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.118624",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m16/16\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m2s\u001b[0m 84ms/step - accuracy: 0.5062 - loss: 0.7076 - val_accuracy: 0.6000 - val_loss: 0.6887",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:15.226196",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "2025-09-13 21:19:15,069 - INFO - Process 1 - 进程 1 开始模型评估",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:22.438810",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "Model training complete.",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:22.539150",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:22.639683",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m1/2\u001b[0m \u001b[32m━━━━━━━━━━\u001b[0m\u001b[37m━━━━━━━━━━\u001b[0m \u001b[1m0s\u001b[0m 109ms/step",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:22.740435",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m2/2\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 61ms/step",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:22.840982",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "\u001b[1m2/2\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 74ms/step",
+        "type": "stdout"
+      },
+      {
+        "timestamp": "2025-09-13T21:19:24.712357",
+        "process_id": 1,
+        "pid": 49504,
+        "message": "2025-09-13 21:19:24,712 - INFO - Process 1 - 进程 1 执行完成",
+        "type": "stdout"
+      }
+    ]
+  },
+  "gpu_status": {
+    "total_gpus": 0,
+    "gpu_info": []
+  },
+  "session_info": {
+    "session_id": "final_fix_test_20250913_211850_20250913_211905",
+    "session_dir": "output\\final_fix_test_20250913_211850_20250913_211905",
+    "subdirs": {
+      "models": "output\\final_fix_test_20250913_211850_20250913_211905\\models",
+      "logs": "output\\final_fix_test_20250913_211850_20250913_211905\\logs",
+      "images": "output\\final_fix_test_20250913_211850_20250913_211905\\images",
+      "configs": "output\\final_fix_test_20250913_211850_20250913_211905\\configs",
+      "results": "output\\final_fix_test_20250913_211850_20250913_211905\\results",
+      "temp": "output\\final_fix_test_20250913_211850_20250913_211905\\temp"
+    },
+    "created_at": "2025-09-13T21:19:25.945218"
+  },
+  "log_file": "output\\final_fix_test_20250913_211850_20250913_211905\\logs\\execution_log.json"
+}

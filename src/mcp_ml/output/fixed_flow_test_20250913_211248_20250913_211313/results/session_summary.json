@@ -1,0 +1,36 @@
+{
+  "session_info": {
+    "session_id": "fixed_flow_test_20250913_211248_20250913_211313",
+    "session_dir": "output\\fixed_flow_test_20250913_211248_20250913_211313",
+    "subdirs": {
+      "models": "output\\fixed_flow_test_20250913_211248_20250913_211313\\models",
+      "logs": "output\\fixed_flow_test_20250913_211248_20250913_211313\\logs",
+      "images": "output\\fixed_flow_test_20250913_211248_20250913_211313\\images",
+      "configs": "output\\fixed_flow_test_20250913_211248_20250913_211313\\configs",
+      "results": "output\\fixed_flow_test_20250913_211248_20250913_211313\\results",
+      "temp": "output\\fixed_flow_test_20250913_211248_20250913_211313\\temp"
+    },
+    "created_at": "2025-09-13T21:13:21.648173"
+  },
+  "files": {
+    "models": [],
+    "logs": [
+      {
+        "name": "execution_log.json",
+        "size": 27,
+        "size_mb": 0.0
+      }
+    ],
+    "images": [],
+    "configs": [],
+    "results": [
+      {
+        "name": "execution_results.json",
+        "size": 3149,
+        "size_mb": 0.0
+      }
+    ],
+    "temp": []
+  },
+  "created_at": "2025-09-13T21:13:21.652570"
+}

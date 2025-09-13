@@ -72,6 +72,13 @@ class ParallelMLExecutor:
             )
             logger.info(f"创建进程配置: {process_configs}")
             
+            # 3.5. 保存实际运行时配置文件到configs目录（用于debug）
+            for i, process_config_path in enumerate(process_configs):
+                try:
+                    self.output_manager.save_config(process_config_path, i)
+                except Exception as e:
+                    logger.warning(f"保存进程 {i} 配置文件失败: {e}")
+            
             # 4. 启动并行进程
             self._start_parallel_processes(process_configs, gpu_allocations)
             
@@ -138,8 +145,11 @@ import logging
 import yaml
 import tensorflow as tf
 
-# 添加当前目录到Python路径
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# 添加mcp_ml目录到Python路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 临时脚本在项目根目录，需要找到src/mcp_ml目录
+mcp_ml_dir = os.path.join(current_dir, 'src', 'mcp_ml')
+sys.path.insert(0, mcp_ml_dir)
 
 from data_loading import download_data
 from data_preprocessing import load_and_preprocess_data, create_dataset

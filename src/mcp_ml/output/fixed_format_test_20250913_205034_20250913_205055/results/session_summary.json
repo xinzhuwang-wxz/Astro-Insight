@@ -1,0 +1,68 @@
+{
+  "session_info": {
+    "session_id": "fixed_format_test_20250913_205034_20250913_205055",
+    "session_dir": "output\\fixed_format_test_20250913_205034_20250913_205055",
+    "subdirs": {
+      "models": "output\\fixed_format_test_20250913_205034_20250913_205055\\models",
+      "logs": "output\\fixed_format_test_20250913_205034_20250913_205055\\logs",
+      "images": "output\\fixed_format_test_20250913_205034_20250913_205055\\images",
+      "configs": "output\\fixed_format_test_20250913_205034_20250913_205055\\configs",
+      "results": "output\\fixed_format_test_20250913_205034_20250913_205055\\results",
+      "temp": "output\\fixed_format_test_20250913_205034_20250913_205055\\temp"
+    },
+    "created_at": "2025-09-13T20:51:09.468764"
+  },
+  "files": {
+    "models": [],
+    "logs": [
+      {
+        "name": "execution_log.json",
+        "size": 27,
+        "size_mb": 0.0
+      }
+    ],
+    "images": [
+      {
+        "name": "confusion_matrix_process_0_tmpxrcvmmge.png",
+        "size": 61636,
+        "size_mb": 0.06
+      },
+      {
+        "name": "confusion_matrix_process_1_tmp4xninpu0.png",
+        "size": 66967,
+        "size_mb": 0.06
+      },
+      {
+        "name": "training_history_process_0_tmp8u8ca81w.png",
+        "size": 125551,
+        "size_mb": 0.12
+      },
+      {
+        "name": "training_history_process_1_tmp2dhhg9uj.png",
+        "size": 129066,
+        "size_mb": 0.12
+      }
+    ],
+    "configs": [],
+    "results": [
+      {
+        "name": "execution_results.json",
+        "size": 17724,
+        "size_mb": 0.02
+      }
+    ],
+    "temp": [
+      {
+        "name": "best_model_process_0_20250913_205056.keras",
+        "size": 39704083,
+        "size_mb": 37.86
+      },
+      {
+        "name": "best_model_process_1_20250913_205056.keras",
+        "size": 26480767,
+        "size_mb": 25.25
+      }
+    ]
+  },
+  "created_at": "2025-09-13T20:51:09.471233"
+}

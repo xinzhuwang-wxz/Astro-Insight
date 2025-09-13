@@ -2,7 +2,7 @@
 
 # 1. Data Preprocessing Configuration
 data_preprocessing:
-  image_dir: 'sample_data\images'
+  image_dir: 'sample_data/images'
   
   # Data Splitting
   split_ratios:

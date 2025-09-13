@@ -1,0 +1,47 @@
+{
+  "session_info": {
+    "session_id": "config_generation_test_20250913_212228_20250913_212249",
+    "session_dir": "output\\config_generation_test_20250913_212228_20250913_212249",
+    "subdirs": {
+      "models": "output\\config_generation_test_20250913_212228_20250913_212249\\models",
+      "logs": "output\\config_generation_test_20250913_212228_20250913_212249\\logs",
+      "images": "output\\config_generation_test_20250913_212228_20250913_212249\\images",
+      "configs": "output\\config_generation_test_20250913_212228_20250913_212249\\configs",
+      "results": "output\\config_generation_test_20250913_212228_20250913_212249\\results",
+      "temp": "output\\config_generation_test_20250913_212228_20250913_212249\\temp"
+    },
+    "created_at": "2025-09-13T21:23:16.175223"
+  },
+  "files": {
+    "models": [],
+    "logs": [
+      {
+        "name": "execution_log.json",
+        "size": 27,
+        "size_mb": 0.0
+      }
+    ],
+    "images": [],
+    "configs": [
+      {
+        "name": "config_process_0_generated_config_1_process_0_20250913_212249.yaml",
+        "size": 1875,
+        "size_mb": 0.0
+      },
+      {
+        "name": "config_process_1_generated_config_2_process_1_20250913_212249.yaml",
+        "size": 1875,
+        "size_mb": 0.0
+      }
+    ],
+    "results": [
+      {
+        "name": "execution_results.json",
+        "size": 15418,
+        "size_mb": 0.01
+      }
+    ],
+    "temp": []
+  },
+  "created_at": "2025-09-13T21:23:16.181143"
+}

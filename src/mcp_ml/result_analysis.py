@@ -1,4 +1,3 @@
-import mcp
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import seaborn as sns

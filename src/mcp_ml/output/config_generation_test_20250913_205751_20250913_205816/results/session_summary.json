@@ -1,0 +1,68 @@
+{
+  "session_info": {
+    "session_id": "config_generation_test_20250913_205751_20250913_205816",
+    "session_dir": "output\\config_generation_test_20250913_205751_20250913_205816",
+    "subdirs": {
+      "models": "output\\config_generation_test_20250913_205751_20250913_205816\\models",
+      "logs": "output\\config_generation_test_20250913_205751_20250913_205816\\logs",
+      "images": "output\\config_generation_test_20250913_205751_20250913_205816\\images",
+      "configs": "output\\config_generation_test_20250913_205751_20250913_205816\\configs",
+      "results": "output\\config_generation_test_20250913_205751_20250913_205816\\results",
+      "temp": "output\\config_generation_test_20250913_205751_20250913_205816\\temp"
+    },
+    "created_at": "2025-09-13T20:58:28.964897"
+  },
+  "files": {
+    "models": [],
+    "logs": [
+      {
+        "name": "execution_log.json",
+        "size": 27,
+        "size_mb": 0.0
+      }
+    ],
+    "images": [
+      {
+        "name": "confusion_matrix_process_0_tmp441hw3qf.png",
+        "size": 61636,
+        "size_mb": 0.06
+      },
+      {
+        "name": "confusion_matrix_process_1_tmpkshrqbxi.png",
+        "size": 66967,
+        "size_mb": 0.06
+      },
+      {
+        "name": "training_history_process_0_tmpxyew_t6b.png",
+        "size": 132418,
+        "size_mb": 0.13
+      },
+      {
+        "name": "training_history_process_1_tmp1h6ufdd3.png",
+        "size": 137630,
+        "size_mb": 0.13
+      }
+    ],
+    "configs": [],
+    "results": [
+      {
+        "name": "execution_results.json",
+        "size": 17572,
+        "size_mb": 0.02
+      }
+    ],
+    "temp": [
+      {
+        "name": "best_model_process_0_20250913_205816.keras",
+        "size": 39704083,
+        "size_mb": 37.86
+      },
+      {
+        "name": "best_model_process_1_20250913_205816.keras",
+        "size": 39704083,
+        "size_mb": 37.86
+      }
+    ]
+  },
+  "created_at": "2025-09-13T20:58:28.969284"
+}

@@ -1,0 +1,98 @@
+{
+  "session_info": {
+    "session_id": "three_parallel_test_20250913_182009",
+    "session_dir": "output\\three_parallel_test_20250913_182009",
+    "subdirs": {
+      "models": "output\\three_parallel_test_20250913_182009\\models",
+      "logs": "output\\three_parallel_test_20250913_182009\\logs",
+      "images": "output\\three_parallel_test_20250913_182009\\images",
+      "configs": "output\\three_parallel_test_20250913_182009\\configs",
+      "results": "output\\three_parallel_test_20250913_182009\\results",
+      "temp": "output\\three_parallel_test_20250913_182009\\temp"
+    },
+    "created_at": "2025-09-13T18:20:41.088011"
+  },
+  "files": {
+    "models": [],
+    "logs": [
+      {
+        "name": "execution_log.json",
+        "size": 20538,
+        "size_mb": 0.02
+      }
+    ],
+    "images": [
+      {
+        "name": "confusion_matrix_process_0_tmp7ydfp1g9.png",
+        "size": 58737,
+        "size_mb": 0.06
+      },
+      {
+        "name": "confusion_matrix_process_1_tmplac9nhsa.png",
+        "size": 58762,
+        "size_mb": 0.06
+      },
+      {
+        "name": "confusion_matrix_process_2_tmpjgecuie8.png",
+        "size": 61006,
+        "size_mb": 0.06
+      },
+      {
+        "name": "confusion_matrix_process_3_tmpc_7wy_je.png",
+        "size": 66964,
+        "size_mb": 0.06
+      },
+      {
+        "name": "training_history_process_0_tmpjhqctlmj.png",
+        "size": 214309,
+        "size_mb": 0.2
+      },
+      {
+        "name": "training_history_process_1_tmph4oxocsg.png",
+        "size": 228098,
+        "size_mb": 0.22
+      },
+      {
+        "name": "training_history_process_2_tmp_7ld3oou.png",
+        "size": 220743,
+        "size_mb": 0.21
+      },
+      {
+        "name": "training_history_process_3_tmprggftec3.png",
+        "size": 221907,
+        "size_mb": 0.21
+      }
+    ],
+    "configs": [],
+    "results": [
+      {
+        "name": "execution_results.json",
+        "size": 58140,
+        "size_mb": 0.06
+      }
+    ],
+    "temp": [
+      {
+        "name": "best_model_process_0_20250913_182009.keras",
+        "size": 39704083,
+        "size_mb": 37.86
+      },
+      {
+        "name": "best_model_process_1_20250913_182009.keras",
+        "size": 39704083,
+        "size_mb": 37.86
+      },
+      {
+        "name": "best_model_process_2_20250913_182009.keras",
+        "size": 39704083,
+        "size_mb": 37.86
+      },
+      {
+        "name": "best_model_process_3_20250913_182009.keras",
+        "size": 50478770,
+        "size_mb": 48.14
+      }
+    ]
+  },
+  "created_at": "2025-09-13T18:20:41.091535"
+}

@@ -1,0 +1,36 @@
+{
+  "session_info": {
+    "session_id": "final_fix_test_20250913_211850_20250913_211905",
+    "session_dir": "output\\final_fix_test_20250913_211850_20250913_211905",
+    "subdirs": {
+      "models": "output\\final_fix_test_20250913_211850_20250913_211905\\models",
+      "logs": "output\\final_fix_test_20250913_211850_20250913_211905\\logs",
+      "images": "output\\final_fix_test_20250913_211850_20250913_211905\\images",
+      "configs": "output\\final_fix_test_20250913_211850_20250913_211905\\configs",
+      "results": "output\\final_fix_test_20250913_211850_20250913_211905\\results",
+      "temp": "output\\final_fix_test_20250913_211850_20250913_211905\\temp"
+    },
+    "created_at": "2025-09-13T21:19:25.949161"
+  },
+  "files": {
+    "models": [],
+    "logs": [
+      {
+        "name": "execution_log.json",
+        "size": 27,
+        "size_mb": 0.0
+      }
+    ],
+    "images": [],
+    "configs": [],
+    "results": [
+      {
+        "name": "execution_results.json",
+        "size": 15699,
+        "size_mb": 0.01
+      }
+    ],
+    "temp": []
+  },
+  "created_at": "2025-09-13T21:19:25.951511"
+}

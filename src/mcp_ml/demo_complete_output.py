@@ -28,7 +28,7 @@ def demo_complete_output():
     
     try:
         # 1. 显示配置信息
-        configs = ["config/config1.yaml", "config/config2.yaml"]
+        configs = ["src/mcp_ml/config/config1.yaml", "src/mcp_ml/config/config2.yaml"]
         print(f"\n📋 使用配置文件:")
         for i, config in enumerate(configs):
             print(f"   进程 {i}: {config}")

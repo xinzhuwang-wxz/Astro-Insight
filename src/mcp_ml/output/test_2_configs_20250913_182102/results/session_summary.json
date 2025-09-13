@@ -1,0 +1,68 @@
+{
+  "session_info": {
+    "session_id": "test_2_configs_20250913_182102",
+    "session_dir": "output\\test_2_configs_20250913_182102",
+    "subdirs": {
+      "models": "output\\test_2_configs_20250913_182102\\models",
+      "logs": "output\\test_2_configs_20250913_182102\\logs",
+      "images": "output\\test_2_configs_20250913_182102\\images",
+      "configs": "output\\test_2_configs_20250913_182102\\configs",
+      "results": "output\\test_2_configs_20250913_182102\\results",
+      "temp": "output\\test_2_configs_20250913_182102\\temp"
+    },
+    "created_at": "2025-09-13T18:21:18.960173"
+  },
+  "files": {
+    "models": [],
+    "logs": [
+      {
+        "name": "execution_log.json",
+        "size": 4495,
+        "size_mb": 0.0
+      }
+    ],
+    "images": [
+      {
+        "name": "confusion_matrix_process_0_tmp4d7j3olo.png",
+        "size": 61006,
+        "size_mb": 0.06
+      },
+      {
+        "name": "confusion_matrix_process_1_tmpqi09hkpr.png",
+        "size": 65353,
+        "size_mb": 0.06
+      },
+      {
+        "name": "training_history_process_0_tmpaoim41ab.png",
+        "size": 210861,
+        "size_mb": 0.2
+      },
+      {
+        "name": "training_history_process_1_tmpfbjhxorm.png",
+        "size": 204592,
+        "size_mb": 0.2
+      }
+    ],
+    "configs": [],
+    "results": [
+      {
+        "name": "execution_results.json",
+        "size": 30167,
+        "size_mb": 0.03
+      }
+    ],
+    "temp": [
+      {
+        "name": "best_model_process_0_20250913_182102.keras",
+        "size": 39704083,
+        "size_mb": 37.86
+      },
+      {
+        "name": "best_model_process_1_20250913_182102.keras",
+        "size": 39704083,
+        "size_mb": 37.86
+      }
+    ]
+  },
+  "created_at": "2025-09-13T18:21:18.964294"
+}

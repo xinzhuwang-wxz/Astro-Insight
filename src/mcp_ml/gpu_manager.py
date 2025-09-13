@@ -76,33 +76,92 @@ class GPUMemoryManager:
         allocations = []
         gpu_count = len(self.available_gpus)
         
+        logger.info(f"开始为 {process_count} 个进程分配GPU显存，可用GPU数量: {gpu_count}")
+        
         if gpu_count == 1:
             # 单GPU情况：为每个进程分配显存比例
             gpu = self.available_gpus[0]
-            memory_per_process = gpu['memory_free'] // process_count
+            total_memory = gpu.get('memory_total', 8000)  # 默认8GB
+            free_memory = gpu.get('memory_free', total_memory)
+            
+            # 计算每个进程的显存分配
+            # 保留10%的显存作为缓冲，剩余90%分配给进程
+            available_memory = int(free_memory * 0.9)
+            memory_per_process = available_memory // process_count
+            
+            # 确保每个进程至少有1GB显存
+            min_memory = 1024  # 1GB
+            memory_per_process = max(memory_per_process, min_memory)
+            
+            logger.info(f"单GPU显存分配: 总显存={total_memory}MB, 可用显存={available_memory}MB, "
+                       f"每进程显存={memory_per_process}MB")
             
             for i in range(process_count):
                 allocation = {
                     'gpu_index': 0,
                     'memory_limit': memory_per_process,
-                    'memory_fraction': 1.0 / process_count,
+                    'memory_fraction': memory_per_process / total_memory,
                     'process_id': i
                 }
                 allocations.append(allocation)
                 
         else:
-            # 多GPU情况：每个进程使用不同的GPU
-            for i in range(min(process_count, gpu_count)):
-                gpu = self.available_gpus[i]
-                allocation = {
-                    'gpu_index': i,
-                    'memory_limit': gpu['memory_free'],
-                    'memory_fraction': 1.0,
-                    'process_id': i
-                }
-                allocations.append(allocation)
+            # 多GPU情况：优先每个进程使用不同的GPU
+            if process_count <= gpu_count:
+                # 进程数 <= GPU数：每个进程使用不同的GPU
+                for i in range(process_count):
+                    gpu = self.available_gpus[i]
+                    total_memory = gpu.get('memory_total', 8000)
+                    free_memory = gpu.get('memory_free', total_memory)
+                    
+                    # 为每个GPU保留10%显存作为缓冲
+                    available_memory = int(free_memory * 0.9)
+                    
+                    allocation = {
+                        'gpu_index': i,
+                        'memory_limit': available_memory,
+                        'memory_fraction': available_memory / total_memory,
+                        'process_id': i
+                    }
+                    allocations.append(allocation)
+                    
+            else:
+                # 进程数 > GPU数：部分进程需要共享GPU
+                processes_per_gpu = process_count // gpu_count
+                remaining_processes = process_count % gpu_count
+                
+                process_id = 0
+                for gpu_idx in range(gpu_count):
+                    gpu = self.available_gpus[gpu_idx]
+                    total_memory = gpu.get('memory_total', 8000)
+                    free_memory = gpu.get('memory_free', total_memory)
+                    
+                    # 计算这个GPU需要处理的进程数
+                    gpu_process_count = processes_per_gpu
+                    if gpu_idx < remaining_processes:
+                        gpu_process_count += 1
+                    
+                    # 为这个GPU分配显存
+                    available_memory = int(free_memory * 0.9)
+                    memory_per_process = available_memory // gpu_process_count
+                    memory_per_process = max(memory_per_process, 1024)  # 至少1GB
+                    
+                    for _ in range(gpu_process_count):
+                        allocation = {
+                            'gpu_index': gpu_idx,
+                            'memory_limit': memory_per_process,
+                            'memory_fraction': memory_per_process / total_memory,
+                            'process_id': process_id
+                        }
+                        allocations.append(allocation)
+                        process_id += 1
         
-        logger.info(f"GPU显存分配完成: {allocations}")
+        logger.info(f"GPU显存分配完成，共 {len(allocations)} 个分配:")
+        for allocation in allocations:
+            logger.info(f"  进程 {allocation['process_id']}: GPU {allocation['gpu_index']}, "
+                       f"显存限制 {allocation['memory_limit']}MB, "
+                       f"显存比例 {allocation['memory_fraction']:.2%}")
+        
         return allocations
     
     def setup_gpu_for_process(self, allocation: Dict):
